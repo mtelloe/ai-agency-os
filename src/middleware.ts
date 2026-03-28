@@ -1,10 +1,12 @@
-import { updateSession } from '@/lib/supabase/middleware';
-import type { NextRequest } from 'next/server';
+// Middleware disabled - auth check moved to dashboard layout
+// Next.js 16 deprecated middleware in favor of proxy
 
-export async function middleware(request: NextRequest) {
-  return await updateSession(request);
+import { NextResponse, type NextRequest } from 'next/server';
+
+export function middleware(_request: NextRequest) {
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+  matcher: [],
 };

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useUser } from '@/hooks/use-user';
+import { useAuthFetch } from '@/hooks/use-auth-fetch';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +17,7 @@ export default function AnalizadorPage() {
   const router = useRouter();
   const { data: workspace } = useWorkspace();
   const { data: user } = useUser();
+  const { authFetch } = useAuthFetch();
 
   async function handleAnalyze(e: React.FormEvent) {
     e.preventDefault();
@@ -29,9 +31,8 @@ export default function AnalizadorPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/ai/analyze', {
+      const res = await authFetch('/api/ai/analyze', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           url: normalizedUrl,
           workspaceId: workspace.id,

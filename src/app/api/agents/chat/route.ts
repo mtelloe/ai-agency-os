@@ -1,7 +1,14 @@
 import { NextRequest } from 'next/server';
-import { getAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@supabase/supabase-js';
 import { callClaudeStream } from '@/lib/ai/claude';
 import { buildAgentSystemPrompt } from '@/lib/ai/prompts/agent-system';
+
+function getPublicClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+  );
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +21,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const db = getAdminClient();
+    const db = getPublicClient();
 
     // Get agent config
     const { data: agent } = await db
@@ -75,6 +82,8 @@ export async function POST(request: NextRequest) {
       ctaAction: agent.cta_action || 'Contactar con el equipo',
       fallbackMessage: agent.fallback_message,
       handoffMessage: agent.handoff_message,
+      knowledge: agent.knowledge || '',
+      restricciones: agent.restricciones || '',
     });
 
     // Add new user message

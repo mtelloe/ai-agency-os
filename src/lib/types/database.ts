@@ -163,6 +163,8 @@ export interface Agente {
   };
   estado: EstadoAgente;
   deploy_url: string | null;
+  knowledge: string | null;
+  restricciones: string | null;
   created_at: string;
   updated_at: string;
 }

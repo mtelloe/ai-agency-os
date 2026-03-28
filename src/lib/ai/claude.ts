@@ -20,11 +20,14 @@ export async function callClaudeStream(
   systemPrompt: string,
   messages: Array<{ role: 'user' | 'assistant'; content: string }>,
 ) {
+  // Limitar historial a últimos 10 mensajes para ahorrar tokens
+  const trimmedMessages = messages.slice(-10);
+
   return anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 2048,
-    system: systemPrompt,
-    messages,
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 512,
+    system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+    messages: trimmedMessages,
     stream: true,
   });
 }

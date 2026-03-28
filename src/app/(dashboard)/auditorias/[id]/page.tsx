@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import { useWorkspace } from '@/hooks/use-workspace';
 import { useUser } from '@/hooks/use-user';
+import { useAuthFetch } from '@/hooks/use-auth-fetch';
 import type { Auditoria } from '@/lib/types/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,6 +37,7 @@ export default function AuditoriaDetailPage() {
   const supabase = createClient();
   const { data: workspace } = useWorkspace();
   const { data: user } = useUser();
+  const { authFetch } = useAuthFetch();
   const [generatingProposal, setGeneratingProposal] = useState(false);
   const [generatingScripts, setGeneratingScripts] = useState(false);
 
@@ -56,9 +58,8 @@ export default function AuditoriaDetailPage() {
     if (!workspace || !user) return;
     setGeneratingProposal(true);
     try {
-      const res = await fetch('/api/ai/generate-proposal', {
+      const res = await authFetch('/api/ai/generate-proposal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ auditoriaId: id, workspaceId: workspace.id, userId: user.id }),
       });
       if (res.status === 402) { toast.error('Sin créditos'); return; }
@@ -78,9 +79,8 @@ export default function AuditoriaDetailPage() {
     if (!workspace || !user) return;
     setGeneratingScripts(true);
     try {
-      const res = await fetch('/api/ai/generate-scripts', {
+      const res = await authFetch('/api/ai/generate-scripts', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ auditoriaId: id, workspaceId: workspace.id, userId: user.id }),
       });
       if (res.status === 402) { toast.error('Sin créditos'); return; }

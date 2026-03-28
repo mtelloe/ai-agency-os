@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminClient } from '@/lib/supabase/admin';
+import { createApiClient, getTokenFromRequest } from '@/lib/supabase/api-client';
 import { callClaude } from '@/lib/ai/claude';
 import { ANALYZE_BUSINESS_SYSTEM, buildAnalyzePrompt } from '@/lib/ai/prompts/analyze-business';
 import { parseJsonResponse } from '@/lib/ai/parsers';
 import { spendCredit, logActivity } from '@/lib/credits';
 
 async function scrapeUrl(url: string) {
-  // Use Apify web scraper actor
   const token = process.env.APIFY_API_TOKEN;
-  if (!token) {
-    // Fallback: basic fetch
-    return basicScrape(url);
-  }
+  if (!token) return basicScrape(url);
 
   try {
-    // Run Apify actor synchronously
     const runResponse = await fetch(
       `https://api.apify.com/v2/acts/apify~website-content-crawler/run-sync-get-dataset-items?token=${token}`,
       {
@@ -29,13 +24,10 @@ async function scrapeUrl(url: string) {
       }
     );
 
-    if (!runResponse.ok) {
-      return basicScrape(url);
-    }
+    if (!runResponse.ok) return basicScrape(url);
 
     const items = await runResponse.json();
     const page = items[0];
-
     if (!page) return basicScrape(url);
 
     return {
@@ -104,6 +96,12 @@ function extractSocials(text: string, html: string): string[] {
 
 export async function POST(request: NextRequest) {
   try {
+    const token = getTokenFromRequest(request);
+    if (!token) {
+      return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
+    }
+
+    const db = createApiClient(token);
     const { url, workspaceId, userId, empresaId } = await request.json();
 
     if (!url || !workspaceId || !userId) {
@@ -111,49 +109,36 @@ export async function POST(request: NextRequest) {
     }
 
     // Check and spend credit
-    const spent = await spendCredit(workspaceId, userId, 'auditoria', `Auditoría de ${url}`);
+    const spent = await spendCredit(workspaceId, userId, 'auditoria', `Auditoría de ${url}`, token);
     if (!spent) {
       return NextResponse.json({ error: 'No tienes créditos suficientes' }, { status: 402 });
     }
 
-    // Create audit record as "procesando"
-    const { data: auditoria, error: insertError } = await getAdminClient()
+    // Create audit record
+    const { data: auditoria, error: insertError } = await db
       .from('auditorias')
-      .insert({
-        workspace_id: workspaceId,
-        empresa_id: empresaId || null,
-        url,
-        estado: 'procesando',
-      })
+      .insert({ workspace_id: workspaceId, empresa_id: empresaId || null, url, estado: 'procesando' })
       .select()
       .single();
 
     if (insertError) throw insertError;
 
-    // Scrape the URL
+    // Scrape
     const scraped = await scrapeUrl(url);
 
     // Analyze with Claude
-    const prompt = buildAnalyzePrompt(scraped);
-    const rawResponse = await callClaude(ANALYZE_BUSINESS_SYSTEM, prompt);
-
-    // Parse response
+    const rawResponse = await callClaude(ANALYZE_BUSINESS_SYSTEM, buildAnalyzePrompt(scraped));
     const analysis = parseJsonResponse<{
-      resumen_negocio: string;
-      cliente_ideal: string;
-      servicios: string;
-      problemas: string[];
-      oportunidades: string[];
+      resumen_negocio: string; cliente_ideal: string; servicios: string;
+      problemas: string[]; oportunidades: string[];
       automatizaciones_recomendadas: Array<{ nombre: string; descripcion: string; impacto: string }>;
       agentes_recomendados: Array<{ nombre: string; tipo: string; descripcion: string; precio: number }>;
-      mejoras_web: string[];
-      roi_estimado: string;
-      pricing_sugerido: { setup: number; mensual: number };
-      score_oportunidad: number;
+      mejoras_web: string[]; roi_estimado: string;
+      pricing_sugerido: { setup: number; mensual: number }; score_oportunidad: number;
     }>(rawResponse);
 
-    // Update audit with results
-    const { data: updated, error: updateError } = await getAdminClient()
+    // Update audit
+    const { data: updated, error: updateError } = await db
       .from('auditorias')
       .update({
         estado: 'completada',
@@ -181,48 +166,21 @@ export async function POST(request: NextRequest) {
     // Create empresa if not provided
     if (!empresaId && analysis.resumen_negocio) {
       const nombreEmpresa = scraped.title || new URL(url).hostname;
-      const { data: empresa } = await getAdminClient()
+      const { data: empresa } = await db
         .from('empresas')
-        .insert({
-          workspace_id: workspaceId,
-          nombre: nombreEmpresa,
-          website: url,
-          origen: 'scraping',
-        })
+        .insert({ workspace_id: workspaceId, nombre: nombreEmpresa, website: url, origen: 'scraping' })
         .select('id')
         .single();
-
       if (empresa) {
-        await getAdminClient()
-          .from('auditorias')
-          .update({ empresa_id: empresa.id })
-          .eq('id', auditoria.id);
+        await db.from('auditorias').update({ empresa_id: empresa.id }).eq('id', auditoria.id);
       }
     }
 
-    // Log activity
-    await logActivity(workspaceId, userId, 'auditoria_completada', `Auditoría completada: ${url}`, 'auditorias', auditoria.id);
+    await logActivity(workspaceId, userId, 'auditoria_completada', `Auditoría completada: ${url}`, token, 'auditorias', auditoria.id);
 
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Analyze error:', error);
-
-    // If we have an audit ID, mark it as error
-    try {
-      const body = await request.clone().json();
-      if (body.auditoriaId) {
-        await getAdminClient()
-          .from('auditorias')
-          .update({
-            estado: 'error',
-            error_message: error instanceof Error ? error.message : 'Error desconocido',
-          })
-          .eq('id', body.auditoriaId);
-      }
-    } catch {
-      // ignore
-    }
-
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Error al analizar' },
       { status: 500 }

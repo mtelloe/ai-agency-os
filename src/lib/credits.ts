@@ -1,7 +1,16 @@
-import { getAdminClient } from '@/lib/supabase/admin';
+import { createClient } from '@supabase/supabase-js';
 
-export async function checkCredits(workspaceId: string): Promise<{ available: number; canSpend: boolean }> {
-  const { data } = await getAdminClient()
+function getServerClient(accessToken?: string) {
+  const client = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    accessToken ? { global: { headers: { Authorization: `Bearer ${accessToken}` } } } : undefined
+  );
+  return client;
+}
+
+export async function checkCredits(workspaceId: string, accessToken?: string): Promise<{ available: number; canSpend: boolean }> {
+  const { data } = await getServerClient(accessToken)
     .from('workspaces')
     .select('creditos_total, creditos_usados')
     .eq('id', workspaceId)
@@ -18,17 +27,18 @@ export async function spendCredit(
   userId: string,
   accion: string,
   descripcion: string,
+  accessToken?: string,
   referenciaId?: string,
   referenciaTipo?: string,
 ): Promise<boolean> {
-  const { available, canSpend } = await checkCredits(workspaceId);
+  const { available, canSpend } = await checkCredits(workspaceId, accessToken);
   if (!canSpend) return false;
 
-  // Increment usados
-  await getAdminClient().rpc('increment_creditos_usados', { ws_id: workspaceId });
+  const client = getServerClient(accessToken);
 
-  // Log in ledger
-  await getAdminClient().from('creditos_ledger').insert({
+  await client.rpc('increment_creditos_usados', { ws_id: workspaceId });
+
+  await client.from('creditos_ledger').insert({
     workspace_id: workspaceId,
     user_id: userId,
     accion,
@@ -48,10 +58,11 @@ export async function logActivity(
   userId: string,
   tipoEvento: string,
   descripcion: string,
+  accessToken?: string,
   entidadTipo?: string,
   entidadId?: string,
 ) {
-  await getAdminClient().from('actividad').insert({
+  await getServerClient(accessToken).from('actividad').insert({
     workspace_id: workspaceId,
     user_id: userId,
     tipo_evento: tipoEvento,

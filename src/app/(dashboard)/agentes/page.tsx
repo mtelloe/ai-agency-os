@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ListSkeleton } from '@/components/shared/loading-skeleton';
-import { Sparkles, Plus, Copy, Pause, Play, ExternalLink } from 'lucide-react';
+import { Sparkles, Plus, Copy, Pause, Play, ExternalLink, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -96,7 +96,10 @@ export default function AgentesPage() {
                   <Badge variant="secondary">{a.tipo}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground line-clamp-2">{a.business_context}</p>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  <Link href={`/agentes/${a.id}`}>
+                    <Button size="sm" variant="outline"><Pencil className="h-3 w-3 mr-1" /> Editar</Button>
+                  </Link>
                   {a.estado === 'activo' ? (
                     <Button size="sm" variant="outline" onClick={() => toggleMutation.mutate({ id: a.id, newState: 'pausado' })}>
                       <Pause className="h-3 w-3 mr-1" /> Pausar
