@@ -11,6 +11,25 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login');
   }
 
+  // Check if onboarding is completed
+  const { data: profile } = await supabase
+    .from('users_profile')
+    .select('workspace_id')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.workspace_id) {
+    const { data: workspace } = await supabase
+      .from('workspaces')
+      .select('nombre')
+      .eq('id', profile.workspace_id)
+      .single();
+
+    if (!workspace?.nombre || workspace.nombre === 'Mi Workspace') {
+      redirect('/onboarding');
+    }
+  }
+
   return (
     <div className="flex h-screen overflow-hidden">
       <Sidebar />
