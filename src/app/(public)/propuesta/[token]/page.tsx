@@ -117,13 +117,13 @@ export default async function PropuestaPublicPage({
           </Card>
         )}
 
-        {/* Stack tecnológico */}
+        {/* Metodología */}
         {propuesta.stack && (
           <Card>
             <CardHeader>
-              <CardTitle>Stack Tecnológico</CardTitle>
+              <CardTitle>Metodología de trabajo</CardTitle>
               <CardDescription>
-                Herramientas y tecnologías que utilizaremos
+                Cómo trabajamos para garantizar resultados
               </CardDescription>
             </CardHeader>
             <CardContent>

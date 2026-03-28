@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useWorkspace } from '@/hooks/use-workspace';
+import { useAuthFetch } from '@/hooks/use-auth-fetch';
 import { PLANS } from '@/lib/constants';
 import type { Plan } from '@/lib/types/database';
 import {
@@ -35,6 +37,8 @@ const PLAN_BADGE_VARIANTS: Record<Plan, string> = {
 
 export default function FacturacionPage() {
   const { data: workspace, isLoading } = useWorkspace();
+  const { authFetch } = useAuthFetch();
+  const [loadingPlan, setLoadingPlan] = useState<Plan | null>(null);
 
   const currentPlan: Plan = workspace?.plan ?? 'free';
   const creditosTotal = workspace?.creditos_total ?? 0;
@@ -42,15 +46,50 @@ export default function FacturacionPage() {
   const creditosDisponibles = creditosTotal - creditosUsados;
   const usagePercent = creditosTotal > 0 ? (creditosUsados / creditosTotal) * 100 : 0;
 
-  function handleSelectPlan(planKey: Plan) {
+  async function handleSelectPlan(planKey: Plan) {
     if (planKey === currentPlan) return;
     if (planKey === 'free') {
       toast.info('Ya tienes acceso al plan Free.');
       return;
     }
-    toast('Proximamente', {
-      description: 'La integración con Stripe estará disponible pronto.',
-    });
+
+    if (!workspace?.id) {
+      toast.error('No se ha encontrado el workspace.');
+      return;
+    }
+
+    setLoadingPlan(planKey);
+
+    try {
+      const res = await authFetch('/api/stripe/checkout', {
+        method: 'POST',
+        body: JSON.stringify({
+          plan: planKey,
+          workspaceId: workspace.id,
+          userId: workspace.id, // will be overridden by auth on server
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        toast.error(data.error || 'Error al iniciar el proceso de pago.');
+        setLoadingPlan(null);
+        return;
+      }
+
+      if (!data.url) {
+        toast.error('No se pudo obtener la URL de pago. Stripe puede no estar configurado.');
+        setLoadingPlan(null);
+        return;
+      }
+
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
+    } catch {
+      toast.error('Error de conexión al iniciar el pago.');
+      setLoadingPlan(null);
+    }
   }
 
   if (isLoading) {
@@ -160,10 +199,19 @@ export default function FacturacionPage() {
                   <Button
                     className="w-full"
                     variant={isCurrent ? 'outline' : 'default'}
-                    disabled={isCurrent}
+                    disabled={isCurrent || loadingPlan !== null}
                     onClick={() => handleSelectPlan(planKey)}
                   >
-                    {isCurrent ? 'Plan actual' : 'Elegir plan'}
+                    {loadingPlan === planKey ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        Redirigiendo...
+                      </>
+                    ) : isCurrent ? (
+                      'Plan actual'
+                    ) : (
+                      'Elegir plan'
+                    )}
                   </Button>
                 </CardFooter>
               </Card>

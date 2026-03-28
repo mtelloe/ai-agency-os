@@ -44,7 +44,7 @@ export default function PropuestaDetailPage() {
       'SOLUCIÓN PROPUESTA',
       propuesta.solucion,
       '',
-      'STACK TECNOLÓGICO',
+      'METODOLOGÍA',
       propuesta.stack,
       '',
       'CRONOGRAMA',
@@ -109,7 +109,7 @@ export default function PropuestaDetailPage() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Stack tecnológico</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">Metodología</CardTitle></CardHeader>
         <CardContent><p className="text-sm whitespace-pre-wrap">{propuesta.stack}</p></CardContent>
       </Card>
 

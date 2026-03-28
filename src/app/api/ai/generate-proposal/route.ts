@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     const rawResponse = await callClaude(GENERATE_PROPOSAL_SYSTEM, prompt);
     const proposal = parseJsonResponse<{
       titulo: string; resumen_ejecutivo: string; problemas: string; solucion: string;
-      stack: string; cronograma: string; precio_setup: number; precio_mensual: number;
+      metodologia: string; cronograma: string; precio_setup: number; precio_mensual: number;
       roi: string; cta_cierre: string;
     }>(rawResponse);
 
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
         workspace_id: workspaceId, empresa_id: auditoria.empresa_id, auditoria_id: auditoriaId,
         titulo: proposal.titulo, resumen_ejecutivo: proposal.resumen_ejecutivo,
         problemas: proposal.problemas, solucion: proposal.solucion,
-        stack: proposal.stack, cronograma: proposal.cronograma,
+        stack: proposal.metodologia, cronograma: proposal.cronograma,
         precio_setup: proposal.precio_setup, precio_mensual: proposal.precio_mensual,
         roi: proposal.roi, cta_cierre: proposal.cta_cierre,
       })
