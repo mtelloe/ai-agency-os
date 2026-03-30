@@ -80,8 +80,8 @@ export default function AuditoriasPage() {
           {auditorias.map((a) => (
             <Link key={a.id} href={`/auditorias/${a.id}`}>
               <Card className="hover:border-primary/30 transition-colors cursor-pointer">
-                <CardContent className="p-4 flex items-center gap-4">
-                  <div className={cn('text-2xl font-bold w-12 text-center', scoreColor(a.score_oportunidad))}>
+                <CardContent className="p-4 flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-4">
+                  <div className={cn('text-2xl font-bold w-12 text-center shrink-0', scoreColor(a.score_oportunidad))}>
                     {a.score_oportunidad ?? '—'}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -89,16 +89,18 @@ export default function AuditoriasPage() {
                       {(a as Auditoria & { empresas?: { nombre: string } }).empresas?.nombre || new URL(a.url).hostname}
                     </p>
                     <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
-                      <ExternalLink className="h-3 w-3" />
+                      <ExternalLink className="h-3 w-3 shrink-0" />
                       {a.url}
                     </p>
                   </div>
-                  <Badge className={ESTADO_COLORS[a.estado] || ''}>
-                    {a.estado}
-                  </Badge>
-                  <p className="text-xs text-muted-foreground whitespace-nowrap">
-                    {new Date(a.created_at).toLocaleDateString('es-ES')}
-                  </p>
+                  <div className="flex items-center gap-2 ml-auto md:ml-0">
+                    <Badge className={ESTADO_COLORS[a.estado] || ''}>
+                      {a.estado}
+                    </Badge>
+                    <p className="text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(a.created_at).toLocaleDateString('es-ES')}
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
             </Link>

@@ -84,7 +84,7 @@ export default function AgentesPage() {
           }
         />
       ) : (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {agentes.map((a) => (
             <Card key={a.id} className="hover:border-primary/30 transition-colors">
               <CardContent className="p-4 space-y-3">

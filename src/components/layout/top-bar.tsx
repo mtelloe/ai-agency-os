@@ -1,6 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useUser } from '@/hooks/use-user';
 import { Button } from '@/components/ui/button';
@@ -9,13 +10,23 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, Plus, Settings } from 'lucide-react';
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
+} from '@/components/ui/sheet';
+import { LogOut, Plus, Settings, Menu } from 'lucide-react';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
+import { NAV_ITEMS, ADMIN_ITEMS } from './sidebar';
+import { CreditsBadge } from './credits-badge';
 
 export function TopBar() {
   const { data: user } = useUser();
   const router = useRouter();
+  const pathname = usePathname();
   const supabase = createClient();
+  const [sheetOpen, setSheetOpen] = useState(false);
+
+  const isAdmin = user?.rol === 'owner' || user?.rol === 'admin';
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -28,16 +39,27 @@ export function TopBar() {
     : '??';
 
   return (
-    <header className="h-14 border-b bg-card flex items-center justify-between px-6 shrink-0">
-      <div />
+    <header className="h-14 border-b bg-card flex items-center justify-between px-4 md:px-6 shrink-0">
+      {/* Left side: hamburger on mobile */}
+      <div className="flex items-center">
+        <button
+          onClick={() => setSheetOpen(true)}
+          className="md:hidden inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-muted transition-colors"
+          aria-label="Abrir menú"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+      </div>
 
+      {/* Right side */}
       <div className="flex items-center gap-3">
+        {/* Nueva auditoría: full on md+, icon-only on mobile */}
         <Link
           href="/analizador"
           className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/80 transition-colors"
         >
           <Plus className="h-4 w-4" />
-          Nueva auditoría
+          <span className="hidden md:inline">Nueva auditoría</span>
         </Link>
 
         <DropdownMenu>
@@ -62,6 +84,67 @@ export function TopBar() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
+
+      {/* Mobile navigation sheet */}
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent side="left" className="w-72 p-0 flex flex-col">
+          <SheetHeader className="p-4 border-b">
+            <SheetTitle className="text-lg font-bold">AI Agency OS</SheetTitle>
+          </SheetHeader>
+
+          <nav className="flex-1 overflow-y-auto p-3 space-y-1">
+            {NAV_ITEMS.map((item) => {
+              const isActive = pathname === item.href ||
+                (item.href !== '/' && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setSheetOpen(false)}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              );
+            })}
+
+            {isAdmin && (
+              <>
+                <div className="my-2 border-t" />
+                {ADMIN_ITEMS.map((item) => {
+                  const isActive = pathname.startsWith(item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setSheetOpen(false)}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      )}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
+              </>
+            )}
+          </nav>
+
+          <SheetFooter className="p-3 border-t">
+            <CreditsBadge />
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </header>
   );
 }

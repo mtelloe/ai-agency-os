@@ -11,7 +11,7 @@ const ACTIONS = [
 
 export function QuickActions() {
   return (
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {ACTIONS.map((action) => (
         <Link key={action.href} href={action.href}>
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">

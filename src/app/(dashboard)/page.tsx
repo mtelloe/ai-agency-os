@@ -52,11 +52,11 @@ export default function DashboardPage() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {Array.from({ length: 6 }).map((_, i) => <MetricCardSkeleton key={i} />)}
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <MetricCard title="Auditorías realizadas" value={metrics?.totalAuditorias ?? 0} icon={ClipboardList} />
           <MetricCard title="Leads activos" value={metrics?.leadsActivos ?? 0} icon={Users} />
           <MetricCard title="Agentes activos" value={metrics?.agentesActivos ?? 0} icon={Sparkles} />
@@ -66,7 +66,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-6">
           <h2 className="text-lg font-semibold">Acciones rápidas</h2>
           <QuickActions />

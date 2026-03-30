@@ -11,7 +11,7 @@ import {
   CreditCard, ShieldCheck,
 } from 'lucide-react';
 
-const NAV_ITEMS = [
+export const NAV_ITEMS = [
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/analizador', label: 'Analizador', icon: Cpu },
   { href: '/auditorias', label: 'Auditorías', icon: ClipboardList },
@@ -25,7 +25,7 @@ const NAV_ITEMS = [
   { href: '/facturacion', label: 'Facturación', icon: CreditCard },
 ];
 
-const ADMIN_ITEMS = [
+export const ADMIN_ITEMS = [
   { href: '/admin', label: 'Admin', icon: ShieldCheck },
 ];
 
@@ -36,7 +36,7 @@ export function Sidebar() {
   const isAdmin = user?.rol === 'owner' || user?.rol === 'admin';
 
   return (
-    <aside className="flex flex-col h-screen w-64 border-r bg-card shrink-0">
+    <aside className="hidden md:flex flex-col h-screen w-64 border-r bg-card shrink-0">
       <div className="p-4 border-b">
         <h1 className="text-lg font-bold">AI Agency OS</h1>
       </div>

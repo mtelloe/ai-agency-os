@@ -151,7 +151,7 @@ export default function FacturacionPage() {
       {/* Plans */}
       <div>
         <h2 className="mb-4 text-lg font-semibold">Planes disponibles</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {PLAN_KEYS.map((planKey) => {
             const plan = PLANS[planKey];
             const isCurrent = planKey === currentPlan;
