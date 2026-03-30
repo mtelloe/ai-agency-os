@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { PLANS } from '@/lib/constants';
-import type { Plan } from '@/lib/types/database';
+
+/**
+ * Mapeo de planes a Stripe Price IDs reales.
+ * Estos IDs se obtienen de los productos/precios creados en el Dashboard de Stripe.
+ * Configúralos en .env.local con las variables STRIPE_PRICE_ID_STARTER, etc.
+ */
+const STRIPE_PRICE_IDS: Record<string, string | undefined> = {
+  starter: process.env.STRIPE_PRICE_ID_STARTER,
+  pro: process.env.STRIPE_PRICE_ID_PRO,
+  agency: process.env.STRIPE_PRICE_ID_AGENCY,
+};
 
 export async function POST(req: NextRequest) {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -44,8 +53,13 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const planData = PLANS[plan as Plan];
-  const unitAmount = planData.precio_mensual * 100; // cents
+  const priceId = STRIPE_PRICE_IDS[plan];
+  if (!priceId) {
+    return NextResponse.json(
+      { error: `Stripe Price ID no configurado para el plan "${plan}". Añade STRIPE_PRICE_ID_${plan.toUpperCase()} en .env.local.` },
+      { status: 503 },
+    );
+  }
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || req.nextUrl.origin;
 
@@ -55,17 +69,7 @@ export async function POST(req: NextRequest) {
       payment_method_types: ['card'],
       line_items: [
         {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: `AI Agency OS - Plan ${planData.nombre}`,
-              description: `${planData.creditos === -1 ? 'Créditos ilimitados' : `${planData.creditos} créditos/mes`}`,
-            },
-            unit_amount: unitAmount,
-            recurring: {
-              interval: 'month',
-            },
-          },
+          price: priceId,
           quantity: 1,
         },
       ],
