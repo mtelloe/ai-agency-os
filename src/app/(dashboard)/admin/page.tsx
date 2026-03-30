@@ -53,8 +53,14 @@ import {
   ScrollText,
   Bot,
   MessageSquare,
+  Zap,
+  ExternalLink,
+  RefreshCw,
+  Circle,
+  Power,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuthFetch } from '@/hooks/use-auth-fetch';
 
 // ──────────────────────────── Tab: Usuarios ────────────────────────────
 
@@ -525,6 +531,209 @@ function TabActividad({ workspaceId }: { workspaceId: string }) {
   );
 }
 
+// ──────────────────────────── Tab: n8n ────────────────────────────
+
+interface N8nWorkflow {
+  id: string;
+  name: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+function TabN8n() {
+  const { authFetch } = useAuthFetch();
+  const queryClient = useQueryClient();
+
+  const { data, isLoading, error, refetch } = useQuery<{
+    configured: boolean;
+    workflows: N8nWorkflow[];
+    error?: string;
+  }>({
+    queryKey: ['admin-n8n-workflows'],
+    queryFn: async () => {
+      const res = await authFetch('/api/n8n/workflows');
+      if (!res.ok && res.status !== 200) {
+        throw new Error('Error al conectar con n8n');
+      }
+      return res.json();
+    },
+  });
+
+  const toggleWorkflow = useMutation({
+    mutationFn: async ({ id, active }: { id: string; active: boolean }) => {
+      const res = await authFetch('/api/n8n/workflows', {
+        method: 'PATCH',
+        body: JSON.stringify({ id, active }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Error al cambiar el estado');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-n8n-workflows'] });
+      toast.success('Estado del workflow actualizado');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const n8nBaseUrl = process.env.NEXT_PUBLIC_N8N_BASE_URL;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+        <Skeleton className="h-16 w-full" />
+      </div>
+    );
+  }
+
+  const configured = data?.configured ?? false;
+  const workflows = data?.workflows ?? [];
+  const connectionError = error || (!configured && data?.error);
+
+  return (
+    <div className="space-y-6">
+      {/* Estado de conexion */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Zap className="size-5 text-yellow-500" />
+              <div>
+                <CardTitle>Conexion con n8n</CardTitle>
+                <CardDescription>Automatizaciones y workflows</CardDescription>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {configured ? (
+                <Badge className="bg-green-500/10 text-green-600 border-green-500/20">
+                  <Circle className="mr-1 size-2 fill-green-500 text-green-500" />
+                  Conectado
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="bg-red-500/10 text-red-600 border-red-500/20">
+                  <Circle className="mr-1 size-2 fill-red-500 text-red-500" />
+                  No configurado
+                </Badge>
+              )}
+              <Button variant="outline" size="xs" onClick={() => refetch()}>
+                <RefreshCw className="size-3" />
+              </Button>
+            </div>
+          </div>
+        </CardHeader>
+        {!configured && (
+          <CardContent>
+            <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-4">
+              <p className="text-sm font-medium text-yellow-700">n8n no esta configurado</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Anade las variables de entorno <code className="rounded bg-muted px-1 py-0.5">N8N_BASE_URL</code> y{' '}
+                <code className="rounded bg-muted px-1 py-0.5">N8N_API_KEY</code> para conectar con tu instancia de n8n.
+              </p>
+            </div>
+          </CardContent>
+        )}
+        {connectionError && configured && (
+          <CardContent>
+            <div className="rounded-lg border border-red-500/20 bg-red-500/5 p-4">
+              <p className="text-sm font-medium text-red-700">Error de conexion</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {error instanceof Error ? error.message : 'No se pudo conectar con n8n. Comprueba la configuracion.'}
+              </p>
+            </div>
+          </CardContent>
+        )}
+        {configured && n8nBaseUrl && (
+          <CardFooter>
+            <a
+              href={n8nBaseUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" size="sm">
+                <ExternalLink className="mr-1 size-3" />
+                Abrir panel de n8n
+              </Button>
+            </a>
+          </CardFooter>
+        )}
+      </Card>
+
+      {/* Lista de workflows */}
+      {configured && workflows.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Workflows ({workflows.length})</CardTitle>
+            <CardDescription>Lista de automatizaciones configuradas en n8n</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg border">
+              <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 border-b bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                <span>Nombre</span>
+                <span>ID</span>
+                <span>Estado</span>
+                <span>Accion</span>
+              </div>
+              {workflows.map((wf) => (
+                <div
+                  key={wf.id}
+                  className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-4 border-b px-4 py-3 last:border-b-0"
+                >
+                  <span className="text-sm font-medium truncate">{wf.name}</span>
+                  <span className="text-xs text-muted-foreground font-mono">{wf.id}</span>
+                  <Badge
+                    className={
+                      wf.active
+                        ? 'bg-green-500/10 text-green-600 border-green-500/20'
+                        : 'bg-red-500/10 text-red-600 border-red-500/20'
+                    }
+                  >
+                    <Circle
+                      className={`mr-1 size-2 ${wf.active ? 'fill-green-500 text-green-500' : 'fill-red-500 text-red-500'}`}
+                    />
+                    {wf.active ? 'Activo' : 'Inactivo'}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    disabled={toggleWorkflow.isPending}
+                    onClick={() => toggleWorkflow.mutate({ id: wf.id, active: !wf.active })}
+                  >
+                    <Power className="size-3 mr-1" />
+                    {wf.active ? 'Desactivar' : 'Activar'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {configured && workflows.length === 0 && !connectionError && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Zap className="mx-auto mb-3 size-8 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">No hay workflows creados en n8n todavia</p>
+            {n8nBaseUrl && (
+              <a href={n8nBaseUrl} target="_blank" rel="noopener noreferrer">
+                <Button variant="outline" size="sm" className="mt-4">
+                  <ExternalLink className="mr-1 size-3" />
+                  Crear workflow en n8n
+                </Button>
+              </a>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 // ──────────────────────────── Tab: Peligro ────────────────────────────
 
 function TabPeligro({ workspaceId }: { workspaceId: string }) {
@@ -736,6 +945,10 @@ export default function AdminPage() {
             <Activity className="size-4 mr-1" />
             Actividad
           </TabsTrigger>
+          <TabsTrigger value="n8n">
+            <Zap className="size-4 mr-1" />
+            n8n
+          </TabsTrigger>
           <TabsTrigger value="peligro">
             <AlertTriangle className="size-4 mr-1" />
             Peligro
@@ -753,6 +966,9 @@ export default function AdminPage() {
         </TabsContent>
         <TabsContent value="actividad" className="mt-4">
           <TabActividad workspaceId={workspace.id} />
+        </TabsContent>
+        <TabsContent value="n8n" className="mt-4">
+          <TabN8n />
         </TabsContent>
         <TabsContent value="peligro" className="mt-4">
           <TabPeligro workspaceId={workspace.id} />
