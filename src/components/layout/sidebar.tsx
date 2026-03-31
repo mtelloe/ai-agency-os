@@ -38,7 +38,10 @@ export function Sidebar() {
   return (
     <aside className="hidden md:flex flex-col h-screen w-64 border-r bg-card shrink-0">
       <div className="p-4 border-b">
-        <h1 className="text-lg font-bold">AI Agency OS</h1>
+        <div className="flex items-center gap-2">
+          <img src="/icon.svg" alt="AI Agency OS" className="h-6 w-6" />
+          <h1 className="text-lg font-bold">AI Agency OS</h1>
+        </div>
       </div>
 
       <nav className="flex-1 overflow-y-auto p-3 space-y-1">

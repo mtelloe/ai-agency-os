@@ -10,7 +10,6 @@ import {
   Workflow,
   ArrowRight,
   Check,
-  Sparkles,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -95,9 +94,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600">
-              <Sparkles className="h-4 w-4 text-white" />
-            </div>
+            <img src="/icon.svg" alt="AI Agency OS" className="h-8 w-8 rounded-lg" />
             <span className="text-lg font-semibold">AI Agency OS</span>
           </div>
           <div className="flex items-center gap-3">
@@ -338,10 +335,10 @@ export default function LandingPage() {
             &copy; 2026 AI Agency OS by Simedalavida
           </p>
           <div className="flex gap-6">
-            <Link href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            <Link href="/legal/terminos" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Términos
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            <Link href="/legal/privacidad" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
               Privacidad
             </Link>
             <Link href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">

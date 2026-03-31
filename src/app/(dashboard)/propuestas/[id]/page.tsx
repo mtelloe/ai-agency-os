@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ListSkeleton } from '@/components/shared/loading-skeleton';
-import { ArrowLeft, Copy, Send, DollarSign, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Copy, Send, DollarSign, TrendingUp, Download } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -84,6 +84,13 @@ export default function PropuestaDetailPage() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={copyFullText}>
             <Copy className="h-4 w-4 mr-1" /> Copiar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => window.open(`/api/propuestas/${id}/pdf`, '_blank')}
+          >
+            <Download className="h-4 w-4 mr-1" /> PDF
           </Button>
           {propuesta.estado === 'borrador' && (
             <Button size="sm" onClick={markAsSent}>
