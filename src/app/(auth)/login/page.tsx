@@ -50,15 +50,15 @@ export default function LoginPage() {
           <div className="space-y-2">
             <Label htmlFor="password">Contraseña</Label>
             <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-            <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
-              ¿Has olvidado tu contraseña?
-            </Link>
           </div>
         </CardContent>
-        <CardFooter className="flex flex-col gap-4">
+        <CardFooter className="flex flex-col gap-3">
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? 'Entrando...' : 'Entrar'}
           </Button>
+          <Link href="/forgot-password" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+            ¿Has olvidado tu contraseña?
+          </Link>
           <p className="text-sm text-muted-foreground">
             ¿No tienes cuenta?{' '}
             <Link href="/register" className="text-primary hover:underline">
