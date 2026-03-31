@@ -51,10 +51,15 @@ export async function POST(request: NextRequest) {
     const db = createApiClient(token);
     const body = await request.json();
     const { nicho, ciudad, workspaceId, userId } = body;
-    const cantidad = body.cantidad || 5;
+    const cantidad = Math.min(Math.max(1, Number(body.cantidad) || 5), 20);
 
     if (!nicho || !ciudad || !workspaceId || !userId) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 });
+    }
+
+    // Validate string lengths to prevent abuse
+    if (typeof nicho !== 'string' || nicho.length > 200 || typeof ciudad !== 'string' || ciudad.length > 200) {
+      return NextResponse.json({ error: 'Datos de entrada inválidos' }, { status: 400 });
     }
 
     // Spend 2 credits for prospecting
@@ -165,7 +170,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Prospect error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error al prospectar' },
+      { error: 'Error al prospectar. Inténtalo de nuevo más tarde.' },
       { status: 500 }
     );
   }

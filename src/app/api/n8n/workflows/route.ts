@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error al listar workflows n8n:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error al conectar con n8n', workflows: [] },
+      { error: 'Error al conectar con n8n', workflows: [] },
       { status: 500 }
     );
   }
@@ -58,13 +58,18 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Faltan campos: id y active son requeridos' }, { status: 400 });
     }
 
+    // Validate workflow ID format (n8n uses numeric or short string IDs)
+    if (typeof id !== 'string' || id.length > 50 || !/^[\w-]+$/.test(id)) {
+      return NextResponse.json({ error: 'Formato de ID inválido' }, { status: 400 });
+    }
+
     const workflow = await toggleN8nWorkflow(id, active);
 
     return NextResponse.json({ workflow });
   } catch (error) {
     console.error('Error al cambiar estado del workflow:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error al cambiar estado del workflow' },
+      { error: 'Error al cambiar estado del workflow' },
       { status: 500 }
     );
   }

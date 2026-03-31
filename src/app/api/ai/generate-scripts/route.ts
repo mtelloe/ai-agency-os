@@ -17,6 +17,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 });
     }
 
+    // Validate UUID format to prevent injection
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(auditoriaId) || !uuidRegex.test(workspaceId) || !uuidRegex.test(userId)) {
+      return NextResponse.json({ error: 'Formato de ID inválido' }, { status: 400 });
+    }
+
     const { data: auditoria } = await db
       .from('auditorias')
       .select('*, empresas(nombre, nicho)')
@@ -64,6 +70,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(script);
   } catch (error) {
     console.error('Generate scripts error:', error);
-    return NextResponse.json({ error: error instanceof Error ? error.message : 'Error al generar scripts' }, { status: 500 });
+    return NextResponse.json({ error: 'Error al generar scripts. Inténtalo de nuevo más tarde.' }, { status: 500 });
   }
 }

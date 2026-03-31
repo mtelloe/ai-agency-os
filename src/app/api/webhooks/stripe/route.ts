@@ -29,27 +29,29 @@ export async function POST(req: NextRequest) {
 
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-  if (webhookSecret && signature) {
-    try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-    } catch (err) {
-      console.error('[Stripe Webhook] Signature verification failed:', err);
-      return NextResponse.json(
-        { error: 'Firma del webhook inválida.' },
-        { status: 400 },
-      );
-    }
-  } else {
-    // Development mode: skip signature verification
-    console.warn('[Stripe Webhook] Skipping signature verification (no STRIPE_WEBHOOK_SECRET)');
-    try {
-      event = JSON.parse(body) as Stripe.Event;
-    } catch {
-      return NextResponse.json(
-        { error: 'Body inválido.' },
-        { status: 400 },
-      );
-    }
+  if (!webhookSecret) {
+    console.error('[Stripe Webhook] STRIPE_WEBHOOK_SECRET no configurado, rechazando peticion');
+    return NextResponse.json(
+      { error: 'Webhook no configurado.' },
+      { status: 503 },
+    );
+  }
+
+  if (!signature) {
+    return NextResponse.json(
+      { error: 'Falta la cabecera stripe-signature.' },
+      { status: 400 },
+    );
+  }
+
+  try {
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+  } catch (err) {
+    console.error('[Stripe Webhook] Signature verification failed:', err);
+    return NextResponse.json(
+      { error: 'Firma del webhook inválida.' },
+      { status: 400 },
+    );
   }
 
   const supabase = getSupabaseAdmin();

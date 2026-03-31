@@ -13,8 +13,8 @@ function getServerClient() {
 function verifyN8nAuth(request: NextRequest): boolean {
   const apiKey = process.env.N8N_API_KEY;
   if (!apiKey) {
-    console.warn('[webhook-n8n] N8N_API_KEY no configurada, omitiendo verificacion');
-    return true;
+    console.error('[webhook-n8n] N8N_API_KEY no configurada, rechazando peticion');
+    return false;
   }
   const headerKey = request.headers.get('X-N8N-API-KEY');
   return headerKey === apiKey;
@@ -211,10 +211,9 @@ export async function POST(request: NextRequest) {
       }
     }
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
     console.error('[webhook-n8n] Error critico:', error);
     return NextResponse.json(
-      { error: message },
+      { error: 'Error interno del servidor' },
       { status: 500 },
     );
   }

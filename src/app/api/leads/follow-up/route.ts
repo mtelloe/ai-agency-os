@@ -13,9 +13,8 @@ function getServerClient() {
 function verifyN8nAuth(request: NextRequest): boolean {
   const apiKey = process.env.N8N_API_KEY;
   if (!apiKey) {
-    // If N8N_API_KEY is not configured, skip verification
-    console.warn('[follow-up] N8N_API_KEY no configurada, omitiendo verificacion');
-    return true;
+    console.error('[follow-up] N8N_API_KEY no configurada, rechazando peticion');
+    return false;
   }
   const headerKey = request.headers.get('X-N8N-API-KEY');
   return headerKey === apiKey;
@@ -55,7 +54,7 @@ export async function POST(request: NextRequest) {
     if (queryError) {
       console.error('[follow-up] Error al consultar leads:', queryError);
       return NextResponse.json(
-        { error: 'Error al consultar leads', details: queryError.message },
+        { error: 'Error al consultar leads' },
         { status: 500 },
       );
     }
@@ -133,10 +132,9 @@ export async function POST(request: NextRequest) {
       duration_ms: duration,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
     console.error('[follow-up] Error critico:', error);
     return NextResponse.json(
-      { error: message },
+      { error: 'Error interno del servidor' },
       { status: 500 },
     );
   }

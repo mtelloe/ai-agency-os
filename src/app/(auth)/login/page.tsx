@@ -50,6 +50,9 @@ export default function LoginPage() {
           <div className="space-y-2">
             <Label htmlFor="password">Contraseña</Label>
             <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <Link href="/forgot-password" className="text-sm text-muted-foreground hover:text-primary">
+              ¿Has olvidado tu contraseña?
+            </Link>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">

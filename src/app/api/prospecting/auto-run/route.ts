@@ -15,8 +15,8 @@ function getServerClient() {
 function verifyN8nAuth(request: NextRequest): boolean {
   const apiKey = process.env.N8N_API_KEY;
   if (!apiKey) {
-    console.warn('[auto-prospecting] N8N_API_KEY no configurada, omitiendo verificacion');
-    return true;
+    console.error('[auto-prospecting] N8N_API_KEY no configurada, rechazando peticion');
+    return false;
   }
   const headerKey = request.headers.get('X-N8N-API-KEY');
   return headerKey === apiKey;
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
     if (wsError) {
       console.error('[auto-prospecting] Error al consultar workspaces:', wsError);
       return NextResponse.json(
-        { error: 'Error al consultar workspaces', details: wsError.message },
+        { error: 'Error al consultar workspaces' },
         { status: 500 },
       );
     }
@@ -366,10 +366,9 @@ export async function POST(request: NextRequest) {
       duration_ms: duration,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Error interno del servidor';
     console.error('[auto-prospecting] Error critico:', error);
     return NextResponse.json(
-      { error: message },
+      { error: 'Error interno del servidor' },
       { status: 500 },
     );
   }

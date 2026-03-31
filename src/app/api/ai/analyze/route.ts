@@ -108,6 +108,37 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 });
     }
 
+    // Validate URL length to prevent abuse
+    if (typeof url !== 'string' || url.length > 2048) {
+      return NextResponse.json({ error: 'URL demasiado larga (máximo 2048 caracteres)' }, { status: 400 });
+    }
+
+    // Validate URL format, reject dangerous protocols and internal addresses (SSRF protection)
+    try {
+      const parsed = new URL(url);
+      if (!['http:', 'https:'].includes(parsed.protocol)) {
+        return NextResponse.json({ error: 'URL inválida: solo se permiten URLs http/https' }, { status: 400 });
+      }
+      // Block requests to private/internal networks
+      const hostname = parsed.hostname.toLowerCase();
+      if (
+        hostname === 'localhost' ||
+        hostname === '127.0.0.1' ||
+        hostname === '0.0.0.0' ||
+        hostname.startsWith('10.') ||
+        hostname.startsWith('192.168.') ||
+        hostname.startsWith('172.') ||
+        hostname.endsWith('.local') ||
+        hostname.endsWith('.internal') ||
+        hostname === '169.254.169.254' || // AWS metadata
+        hostname === 'metadata.google.internal' // GCP metadata
+      ) {
+        return NextResponse.json({ error: 'URL inválida: no se permiten direcciones internas' }, { status: 400 });
+      }
+    } catch {
+      return NextResponse.json({ error: 'URL inválida' }, { status: 400 });
+    }
+
     // Check and spend credit
     const spent = await spendCredit(workspaceId, userId, 'auditoria', `Auditoría de ${url}`, token);
     if (!spent) {
@@ -182,7 +213,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Analyze error:', error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error al analizar' },
+      { error: 'Error al analizar. Inténtalo de nuevo más tarde.' },
       { status: 500 }
     );
   }

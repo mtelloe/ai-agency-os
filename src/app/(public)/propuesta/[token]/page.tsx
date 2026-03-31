@@ -18,11 +18,31 @@ export default async function PropuestaPublicPage({
   const { token } = await params;
   const supabase = await createClient();
 
+  // Solo seleccionamos los campos necesarios para la vista publica.
+  // NUNCA exponer: workspace_id, empresa_id, auditoria_id, share_token, IDs internos.
   const { data: propuesta } = await supabase
     .from('propuestas')
-    .select('*, empresa:empresas(*)')
+    .select(
+      'titulo, resumen_ejecutivo, problemas, solucion, stack, cronograma, precio_setup, precio_mensual, roi, cta_cierre, version, created_at, empresa:empresas(nombre, website)'
+    )
     .eq('share_token', token)
-    .single<Propuesta & { empresa: { nombre: string; website: string | null } | null }>();
+    .single<
+      Pick<
+        Propuesta,
+        | 'titulo'
+        | 'resumen_ejecutivo'
+        | 'problemas'
+        | 'solucion'
+        | 'stack'
+        | 'cronograma'
+        | 'precio_setup'
+        | 'precio_mensual'
+        | 'roi'
+        | 'cta_cierre'
+        | 'version'
+        | 'created_at'
+      > & { empresa: { nombre: string; website: string | null } | null }
+    >();
 
   if (!propuesta) {
     return (
