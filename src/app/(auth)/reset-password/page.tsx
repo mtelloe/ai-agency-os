@@ -24,25 +24,43 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     async function handleAuthCallback() {
-      const code = searchParams.get('code');
+      // Method 1: token_hash in URL (direct link from our custom email template)
+      const tokenHash = searchParams.get('token_hash');
+      const type = searchParams.get('type');
 
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (tokenHash && type === 'recovery') {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: 'recovery',
+        });
         if (error) {
-          setSessionError('Este enlace ya no es válido. Si has solicitado varios emails, usa siempre el último que recibiste.');
+          setSessionError('Este enlace ya no es válido. Solicita uno nuevo.');
           return;
         }
         setSessionReady(true);
         return;
       }
 
-      // No code in URL — check existing session or listen for hash fragment
+      // Method 2: code in URL (PKCE flow from Supabase default redirect)
+      const code = searchParams.get('code');
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          setSessionError('Este enlace ya no es válido. Solicita uno nuevo.');
+          return;
+        }
+        setSessionReady(true);
+        return;
+      }
+
+      // Method 3: hash fragment (implicit flow)
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setSessionReady(true);
         return;
       }
 
+      // Listen for PASSWORD_RECOVERY event from hash fragment
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
         if (event === 'PASSWORD_RECOVERY') {
           setSessionReady(true);
@@ -56,7 +74,7 @@ export default function ResetPasswordPage() {
           if (s) {
             setSessionReady(true);
           } else {
-            setSessionError('Este enlace ya no es válido. Si has solicitado varios emails, usa siempre el último que recibiste.');
+            setSessionError('No se ha encontrado un enlace válido. Solicita uno nuevo.');
           }
         });
       }, 3000);
@@ -78,7 +96,8 @@ export default function ResetPasswordPage() {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success('Nuevo enlace enviado. Revisa tu bandeja de entrada y usa el último email.');
+      toast.success('Nuevo enlace enviado. Revisa tu bandeja y haz clic en el enlace del último email.');
+      setSessionError('');
     }
   }
 
