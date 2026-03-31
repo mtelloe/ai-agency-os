@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
@@ -16,55 +16,71 @@ export default function ResetPasswordPage() {
   const [loading, setLoading] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [sessionError, setSessionError] = useState('');
+  const [resendEmail, setResendEmail] = useState('');
+  const [resending, setResending] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
 
   useEffect(() => {
-    // Supabase redirects with a code in the URL hash or query params
-    // We need to exchange it for a session before we can update the password
     async function handleAuthCallback() {
       const code = searchParams.get('code');
 
       if (code) {
-        // Exchange the code for a session
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
-          setSessionError('El enlace ha caducado o ya se ha usado. Solicita uno nuevo.');
+          setSessionError('Este enlace ya no es válido. Si has solicitado varios emails, usa siempre el último que recibiste.');
           return;
         }
+        setSessionReady(true);
+        return;
       }
 
-      // Check if we have a valid session (could come from hash fragment too)
+      // No code in URL — check existing session or listen for hash fragment
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setSessionReady(true);
-      } else {
-        // Try listening for auth state change (hash fragment flow)
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-          if (event === 'PASSWORD_RECOVERY') {
+        return;
+      }
+
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setSessionReady(true);
+          subscription.unsubscribe();
+        }
+      });
+
+      setTimeout(() => {
+        subscription.unsubscribe();
+        supabase.auth.getSession().then(({ data: { session: s } }) => {
+          if (s) {
             setSessionReady(true);
+          } else {
+            setSessionError('Este enlace ya no es válido. Si has solicitado varios emails, usa siempre el último que recibiste.');
           }
         });
-
-        // Give it a moment
-        setTimeout(() => {
-          subscription.unsubscribe();
-          if (!sessionReady) {
-            supabase.auth.getSession().then(({ data: { session: s } }) => {
-              if (s) {
-                setSessionReady(true);
-              } else {
-                setSessionError('El enlace ha caducado o ya se ha usado. Solicita uno nuevo.');
-              }
-            });
-          }
-        }, 3000);
-      }
+      }, 3000);
     }
 
     handleAuthCallback();
   }, []);
+
+  async function handleResend() {
+    if (!resendEmail) {
+      toast.error('Introduce tu email');
+      return;
+    }
+    setResending(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(resendEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setResending(false);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Nuevo enlace enviado. Revisa tu bandeja de entrada y usa el último email.');
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -85,9 +101,12 @@ export default function ResetPasswordPage() {
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {
-        toast.error(error.message === 'Auth session missing!'
-          ? 'La sesión ha caducado. Solicita un nuevo enlace de recuperación.'
-          : error.message);
+        if (error.message.includes('session')) {
+          setSessionError('La sesión ha caducado. Solicita un nuevo enlace.');
+          setSessionReady(false);
+        } else {
+          toast.error(error.message);
+        }
         return;
       }
 
@@ -104,12 +123,30 @@ export default function ResetPasswordPage() {
     return (
       <Card>
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Enlace caducado</CardTitle>
-          <CardDescription>{sessionError}</CardDescription>
+          <CardTitle className="text-xl">Enlace no válido</CardTitle>
+          <CardDescription className="mt-2">{sessionError}</CardDescription>
         </CardHeader>
-        <CardFooter>
-          <Button className="w-full" onClick={() => router.push('/forgot-password')}>
-            Solicitar nuevo enlace
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground text-center">
+            Introduce tu email para recibir un nuevo enlace:
+          </p>
+          <Input
+            type="email"
+            placeholder="tu@email.com"
+            value={resendEmail}
+            onChange={(e) => setResendEmail(e.target.value)}
+          />
+        </CardContent>
+        <CardFooter className="flex flex-col gap-3">
+          <Button className="w-full" onClick={handleResend} disabled={resending}>
+            {resending ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</>
+            ) : (
+              <><RefreshCw className="h-4 w-4 mr-2" /> Enviar nuevo enlace</>
+            )}
+          </Button>
+          <Button variant="outline" className="w-full" onClick={() => router.push('/login')}>
+            Volver al inicio de sesión
           </Button>
         </CardFooter>
       </Card>
