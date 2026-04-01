@@ -10,14 +10,16 @@ import type { Auditoria } from '@/lib/types/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { ListSkeleton } from '@/components/shared/loading-skeleton';
 import {
   AlertTriangle, CheckCircle, Lightbulb, Bot, Wrench, TrendingUp,
-  DollarSign, FileText, PenTool, Loader2, ArrowLeft,
+  DollarSign, FileText, PenTool, Loader2, ArrowLeft, Pencil, Save, X, Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +32,36 @@ function ScoreCircle({ score }: { score: number }) {
   );
 }
 
+interface EditForm {
+  score_oportunidad: number;
+  resumen_negocio: string;
+  cliente_ideal: string;
+  servicios: string;
+  problemas: string[];
+  oportunidades: string[];
+  mejoras_web: string[];
+  roi_estimado: string;
+  pricing_sugerido: { setup: number; mensual: number };
+  automatizaciones_recomendadas: Array<{ nombre: string; descripcion: string; impacto: string }>;
+  agentes_recomendados: Array<{ nombre: string; tipo: string; descripcion: string; precio: number }>;
+}
+
+function initEditForm(auditoria: Auditoria): EditForm {
+  return {
+    score_oportunidad: auditoria.score_oportunidad || 0,
+    resumen_negocio: auditoria.resumen_negocio || '',
+    cliente_ideal: auditoria.cliente_ideal || '',
+    servicios: auditoria.servicios || '',
+    problemas: [...(auditoria.problemas || [])],
+    oportunidades: [...(auditoria.oportunidades || [])],
+    mejoras_web: [...(auditoria.mejoras_web || [])],
+    roi_estimado: auditoria.roi_estimado || '',
+    pricing_sugerido: { setup: auditoria.pricing_sugerido?.setup || 0, mensual: auditoria.pricing_sugerido?.mensual || 0 },
+    automatizaciones_recomendadas: (auditoria.automatizaciones_recomendadas || []).map(a => ({ ...a })),
+    agentes_recomendados: (auditoria.agentes_recomendados || []).map(a => ({ ...a })),
+  };
+}
+
 export default function AuditoriaDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -40,6 +72,9 @@ export default function AuditoriaDetailPage() {
   const { authFetch } = useAuthFetch();
   const [generatingProposal, setGeneratingProposal] = useState(false);
   const [generatingScripts, setGeneratingScripts] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState<EditForm | null>(null);
 
   const { data: auditoria, isLoading } = useQuery<Auditoria>({
     queryKey: ['auditoria', id],
@@ -53,6 +88,132 @@ export default function AuditoriaDetailPage() {
       return data as Auditoria;
     },
   });
+
+  useEffect(() => {
+    if (auditoria && !editForm) {
+      setEditForm(initEditForm(auditoria));
+    }
+  }, [auditoria, editForm]);
+
+  function startEditing() {
+    if (!auditoria) return;
+    setEditForm(initEditForm(auditoria));
+    setEditing(true);
+  }
+
+  function cancelEditing() {
+    if (!auditoria) return;
+    setEditForm(initEditForm(auditoria));
+    setEditing(false);
+  }
+
+  function updateField<K extends keyof EditForm>(field: K, value: EditForm[K]) {
+    setEditForm(prev => prev ? { ...prev, [field]: value } : prev);
+  }
+
+  function updateListItem(field: 'problemas' | 'oportunidades' | 'mejoras_web', index: number, value: string) {
+    setEditForm(prev => {
+      if (!prev) return prev;
+      const arr = [...prev[field]];
+      arr[index] = value;
+      return { ...prev, [field]: arr };
+    });
+  }
+
+  function removeListItem(field: 'problemas' | 'oportunidades' | 'mejoras_web', index: number) {
+    setEditForm(prev => {
+      if (!prev) return prev;
+      const arr = [...prev[field]];
+      arr.splice(index, 1);
+      return { ...prev, [field]: arr };
+    });
+  }
+
+  function addListItem(field: 'problemas' | 'oportunidades' | 'mejoras_web', defaultValue: string) {
+    setEditForm(prev => {
+      if (!prev) return prev;
+      return { ...prev, [field]: [...prev[field], defaultValue] };
+    });
+  }
+
+  function updateAutomatizacion(index: number, key: keyof EditForm['automatizaciones_recomendadas'][0], value: string) {
+    setEditForm(prev => {
+      if (!prev) return prev;
+      const arr = prev.automatizaciones_recomendadas.map((a, i) => i === index ? { ...a, [key]: value } : a);
+      return { ...prev, automatizaciones_recomendadas: arr };
+    });
+  }
+
+  function removeAutomatizacion(index: number) {
+    setEditForm(prev => {
+      if (!prev) return prev;
+      const arr = [...prev.automatizaciones_recomendadas];
+      arr.splice(index, 1);
+      return { ...prev, automatizaciones_recomendadas: arr };
+    });
+  }
+
+  function addAutomatizacion() {
+    setEditForm(prev => {
+      if (!prev) return prev;
+      return { ...prev, automatizaciones_recomendadas: [...prev.automatizaciones_recomendadas, { nombre: '', descripcion: '', impacto: 'Medio' }] };
+    });
+  }
+
+  function updateAgente(index: number, key: keyof EditForm['agentes_recomendados'][0], value: string | number) {
+    setEditForm(prev => {
+      if (!prev) return prev;
+      const arr = prev.agentes_recomendados.map((a, i) => i === index ? { ...a, [key]: value } : a);
+      return { ...prev, agentes_recomendados: arr };
+    });
+  }
+
+  function removeAgente(index: number) {
+    setEditForm(prev => {
+      if (!prev) return prev;
+      const arr = [...prev.agentes_recomendados];
+      arr.splice(index, 1);
+      return { ...prev, agentes_recomendados: arr };
+    });
+  }
+
+  function addAgente() {
+    setEditForm(prev => {
+      if (!prev) return prev;
+      return { ...prev, agentes_recomendados: [...prev.agentes_recomendados, { nombre: '', tipo: '', descripcion: '', precio: 0 }] };
+    });
+  }
+
+  async function handleSave() {
+    if (!editForm) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('auditorias')
+        .update({
+          score_oportunidad: editForm.score_oportunidad,
+          resumen_negocio: editForm.resumen_negocio,
+          cliente_ideal: editForm.cliente_ideal,
+          servicios: editForm.servicios,
+          problemas: editForm.problemas,
+          oportunidades: editForm.oportunidades,
+          mejoras_web: editForm.mejoras_web,
+          roi_estimado: editForm.roi_estimado,
+          pricing_sugerido: editForm.pricing_sugerido,
+          automatizaciones_recomendadas: editForm.automatizaciones_recomendadas,
+          agentes_recomendados: editForm.agentes_recomendados,
+        })
+        .eq('id', id);
+      if (error) throw error;
+      toast.success('Cambios guardados correctamente');
+      setEditing(false);
+      queryClient.invalidateQueries({ queryKey: ['auditoria', id] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Error al guardar los cambios');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function handleGenerateProposal() {
     if (!workspace || !user) return;
@@ -97,12 +258,13 @@ export default function AuditoriaDetailPage() {
   }
 
   if (isLoading) return <ListSkeleton rows={8} />;
-  if (!auditoria) return <p>Auditoría no encontrada</p>;
+  if (!auditoria) return <p>Auditoria no encontrada</p>;
 
   const empresa = auditoria.empresa as (typeof auditoria.empresa & { nombre?: string; nicho?: string }) | undefined;
 
   return (
     <div className="space-y-6 max-w-4xl">
+      {/* Header */}
       <div className="flex items-center gap-4">
         <Link href="/auditorias">
           <Button variant="ghost" size="icon-sm"><ArrowLeft className="h-4 w-4" /></Button>
@@ -111,8 +273,42 @@ export default function AuditoriaDetailPage() {
           <h1 className="text-2xl font-bold">{empresa?.nombre || new URL(auditoria.url).hostname}</h1>
           <p className="text-sm text-muted-foreground">{auditoria.url}</p>
         </div>
-        {auditoria.estado === 'completada' && (
+        {auditoria.estado === 'completada' && !editing && (
           <ScoreCircle score={auditoria.score_oportunidad || 0} />
+        )}
+        {auditoria.estado === 'completada' && editing && editForm && (
+          <div className="flex flex-col items-center gap-1">
+            <ScoreCircle score={editForm.score_oportunidad} />
+            <Input
+              type="number"
+              min={0}
+              max={100}
+              value={editForm.score_oportunidad}
+              onChange={(e) => updateField('score_oportunidad', Math.min(100, Math.max(0, parseInt(e.target.value) || 0)))}
+              className="w-20 text-center text-sm"
+            />
+          </div>
+        )}
+        {auditoria.estado === 'completada' && (
+          <div className="flex gap-2">
+            {!editing ? (
+              <Button variant="outline" size="sm" onClick={startEditing}>
+                <Pencil className="h-4 w-4 mr-1.5" />
+                Editar
+              </Button>
+            ) : (
+              <>
+                <Button variant="outline" size="sm" onClick={cancelEditing} disabled={saving}>
+                  <X className="h-4 w-4 mr-1.5" />
+                  Cancelar
+                </Button>
+                <Button size="sm" onClick={handleSave} disabled={saving}>
+                  {saving ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
+                  Guardar
+                </Button>
+              </>
+            )}
+          </div>
         )}
       </div>
 
@@ -121,7 +317,7 @@ export default function AuditoriaDetailPage() {
           <CardContent className="p-4 flex items-center gap-3">
             <AlertTriangle className="h-5 w-5 text-destructive" />
             <div>
-              <p className="font-medium text-destructive">Error en la auditoría</p>
+              <p className="font-medium text-destructive">Error en la auditoria</p>
               <p className="text-sm text-muted-foreground">{auditoria.error_message || 'Error desconocido'}</p>
             </div>
           </CardContent>
@@ -146,15 +342,42 @@ export default function AuditoriaDetailPage() {
           <Card>
             <CardHeader><CardTitle className="text-base">Resumen del negocio</CardTitle></CardHeader>
             <CardContent className="space-y-3">
-              <p>{auditoria.resumen_negocio}</p>
+              {editing && editForm ? (
+                <Textarea
+                  value={editForm.resumen_negocio}
+                  onChange={(e) => updateField('resumen_negocio', e.target.value)}
+                  rows={4}
+                  placeholder="Resumen del negocio..."
+                />
+              ) : (
+                <p>{auditoria.resumen_negocio}</p>
+              )}
               <Separator />
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Cliente ideal</p>
-                <p className="text-sm">{auditoria.cliente_ideal}</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Cliente ideal</p>
+                {editing && editForm ? (
+                  <Textarea
+                    value={editForm.cliente_ideal}
+                    onChange={(e) => updateField('cliente_ideal', e.target.value)}
+                    rows={2}
+                    placeholder="Cliente ideal..."
+                  />
+                ) : (
+                  <p className="text-sm">{auditoria.cliente_ideal}</p>
+                )}
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Servicios principales</p>
-                <p className="text-sm">{auditoria.servicios}</p>
+                <p className="text-sm font-medium text-muted-foreground mb-1">Servicios principales</p>
+                {editing && editForm ? (
+                  <Textarea
+                    value={editForm.servicios}
+                    onChange={(e) => updateField('servicios', e.target.value)}
+                    rows={2}
+                    placeholder="Servicios principales..."
+                  />
+                ) : (
+                  <p className="text-sm">{auditoria.servicios}</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -168,14 +391,36 @@ export default function AuditoriaDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2">
-                {(auditoria.problemas || []).map((p, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <span className="text-red-500 mt-0.5">•</span>
-                    {p}
-                  </li>
-                ))}
-              </ul>
+              {editing && editForm ? (
+                <div className="space-y-2">
+                  {editForm.problemas.map((p, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="text-red-500 shrink-0">•</span>
+                      <Input
+                        value={p}
+                        onChange={(e) => updateListItem('problemas', i, e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button variant="ghost" size="icon-xs" onClick={() => removeListItem('problemas', i)}>
+                        <X className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => addListItem('problemas', '')}>
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Añadir
+                  </Button>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {(auditoria.problemas || []).map((p, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <span className="text-red-500 mt-0.5">•</span>
+                      {p}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
 
@@ -188,14 +433,36 @@ export default function AuditoriaDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2">
-                {(auditoria.oportunidades || []).map((o, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                    {o}
-                  </li>
-                ))}
-              </ul>
+              {editing && editForm ? (
+                <div className="space-y-2">
+                  {editForm.oportunidades.map((o, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                      <Input
+                        value={o}
+                        onChange={(e) => updateListItem('oportunidades', i, e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button variant="ghost" size="icon-xs" onClick={() => removeListItem('oportunidades', i)}>
+                        <X className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => addListItem('oportunidades', '')}>
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Añadir
+                  </Button>
+                </div>
+              ) : (
+                <ul className="space-y-2">
+                  {(auditoria.oportunidades || []).map((o, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm">
+                      <CheckCircle className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                      {o}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
 
@@ -208,17 +475,59 @@ export default function AuditoriaDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {(auditoria.automatizaciones_recomendadas || []).map((a, i) => (
-                  <div key={i} className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium">{a.nombre}</p>
-                      <p className="text-xs text-muted-foreground">{a.descripcion}</p>
+              {editing && editForm ? (
+                <div className="space-y-4">
+                  {editForm.automatizaciones_recomendadas.map((a, i) => (
+                    <div key={i} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={a.nombre}
+                          onChange={(e) => updateAutomatizacion(i, 'nombre', e.target.value)}
+                          placeholder="Nombre"
+                          className="flex-1 font-medium"
+                        />
+                        <select
+                          value={a.impacto}
+                          onChange={(e) => updateAutomatizacion(i, 'impacto', e.target.value)}
+                          className={cn(
+                            'h-8 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none',
+                            'focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50'
+                          )}
+                        >
+                          <option value="Alto">Alto</option>
+                          <option value="Medio">Medio</option>
+                          <option value="Bajo">Bajo</option>
+                        </select>
+                        <Button variant="ghost" size="icon-xs" onClick={() => removeAutomatizacion(i)}>
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                      </div>
+                      <Input
+                        value={a.descripcion}
+                        onChange={(e) => updateAutomatizacion(i, 'descripcion', e.target.value)}
+                        placeholder="Descripcion..."
+                        className="text-sm"
+                      />
                     </div>
-                    <Badge variant={a.impacto === 'Alto' ? 'default' : 'secondary'}>{a.impacto}</Badge>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addAutomatizacion}>
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Añadir
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {(auditoria.automatizaciones_recomendadas || []).map((a, i) => (
+                    <div key={i} className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-medium">{a.nombre}</p>
+                        <p className="text-xs text-muted-foreground">{a.descripcion}</p>
+                      </div>
+                      <Badge variant={a.impacto === 'Alto' ? 'default' : 'secondary'}>{a.impacto}</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -231,18 +540,66 @@ export default function AuditoriaDetailPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-2 gap-3">
-                {(auditoria.agentes_recomendados || []).map((a, i) => (
-                  <Card key={i}>
-                    <CardContent className="p-3">
-                      <p className="text-sm font-medium">{a.nombre}</p>
-                      <Badge variant="secondary" className="text-xs mt-1">{a.tipo}</Badge>
-                      <p className="text-xs text-muted-foreground mt-2">{a.descripcion}</p>
-                      <p className="text-sm font-bold text-primary mt-2">{a.precio}€/mes</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              {editing && editForm ? (
+                <div className="space-y-4">
+                  {editForm.agentes_recomendados.map((a, i) => (
+                    <div key={i} className="rounded-lg border p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Input
+                          value={a.nombre}
+                          onChange={(e) => updateAgente(i, 'nombre', e.target.value)}
+                          placeholder="Nombre"
+                          className="flex-1 font-medium"
+                        />
+                        <Button variant="ghost" size="icon-xs" onClick={() => removeAgente(i)}>
+                          <X className="h-3.5 w-3.5 text-muted-foreground" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input
+                          value={a.tipo}
+                          onChange={(e) => updateAgente(i, 'tipo', e.target.value)}
+                          placeholder="Tipo"
+                          className="text-sm"
+                        />
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="number"
+                            value={a.precio}
+                            onChange={(e) => updateAgente(i, 'precio', parseFloat(e.target.value) || 0)}
+                            placeholder="Precio"
+                            className="text-sm"
+                          />
+                          <span className="text-xs text-muted-foreground shrink-0">/mes</span>
+                        </div>
+                      </div>
+                      <Input
+                        value={a.descripcion}
+                        onChange={(e) => updateAgente(i, 'descripcion', e.target.value)}
+                        placeholder="Descripcion..."
+                        className="text-sm"
+                      />
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={addAgente}>
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Añadir
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {(auditoria.agentes_recomendados || []).map((a, i) => (
+                    <Card key={i}>
+                      <CardContent className="p-3">
+                        <p className="text-sm font-medium">{a.nombre}</p>
+                        <Badge variant="secondary" className="text-xs mt-1">{a.tipo}</Badge>
+                        <p className="text-xs text-muted-foreground mt-2">{a.descripcion}</p>
+                        <p className="text-sm font-bold text-primary mt-2">{a.precio}/mes</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -250,14 +607,36 @@ export default function AuditoriaDetailPage() {
           <Card>
             <CardHeader><CardTitle className="text-base">Mejoras web</CardTitle></CardHeader>
             <CardContent>
-              <ul className="space-y-1">
-                {(auditoria.mejoras_web || []).map((m, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm">
-                    <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                    {m}
-                  </li>
-                ))}
-              </ul>
+              {editing && editForm ? (
+                <div className="space-y-2">
+                  {editForm.mejoras_web.map((m, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary shrink-0" />
+                      <Input
+                        value={m}
+                        onChange={(e) => updateListItem('mejoras_web', i, e.target.value)}
+                        className="flex-1"
+                      />
+                      <Button variant="ghost" size="icon-xs" onClick={() => removeListItem('mejoras_web', i)}>
+                        <X className="h-3.5 w-3.5 text-muted-foreground" />
+                      </Button>
+                    </div>
+                  ))}
+                  <Button variant="outline" size="sm" onClick={() => addListItem('mejoras_web', '')}>
+                    <Plus className="h-3.5 w-3.5 mr-1" />
+                    Añadir
+                  </Button>
+                </div>
+              ) : (
+                <ul className="space-y-1">
+                  {(auditoria.mejoras_web || []).map((m, i) => (
+                    <li key={i} className="flex items-center gap-2 text-sm">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                      {m}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </CardContent>
           </Card>
 
@@ -271,7 +650,16 @@ export default function AuditoriaDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm">{auditoria.roi_estimado}</p>
+                {editing && editForm ? (
+                  <Textarea
+                    value={editForm.roi_estimado}
+                    onChange={(e) => updateField('roi_estimado', e.target.value)}
+                    rows={3}
+                    placeholder="ROI estimado..."
+                  />
+                ) : (
+                  <p className="text-sm">{auditoria.roi_estimado}</p>
+                )}
               </CardContent>
             </Card>
             <Card className="border-primary/20">
@@ -282,16 +670,43 @@ export default function AuditoriaDetailPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-6">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Setup</p>
-                    <p className="text-xl font-bold">{auditoria.pricing_sugerido?.setup || '—'}€</p>
+                {editing && editForm ? (
+                  <div className="flex gap-4">
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">Setup</p>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={editForm.pricing_sugerido.setup}
+                          onChange={(e) => updateField('pricing_sugerido', { ...editForm.pricing_sugerido, setup: parseFloat(e.target.value) || 0 })}
+                        />
+                        <span className="text-sm text-muted-foreground shrink-0">&euro;</span>
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">Mensual</p>
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          value={editForm.pricing_sugerido.mensual}
+                          onChange={(e) => updateField('pricing_sugerido', { ...editForm.pricing_sugerido, mensual: parseFloat(e.target.value) || 0 })}
+                        />
+                        <span className="text-sm text-muted-foreground shrink-0">&euro;/mes</span>
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Mensual</p>
-                    <p className="text-xl font-bold">{auditoria.pricing_sugerido?.mensual || '—'}€/mes</p>
+                ) : (
+                  <div className="flex gap-6">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Setup</p>
+                      <p className="text-xl font-bold">{auditoria.pricing_sugerido?.setup || '\u2014'}&euro;</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Mensual</p>
+                      <p className="text-xl font-bold">{auditoria.pricing_sugerido?.mensual || '\u2014'}&euro;/mes</p>
+                    </div>
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
