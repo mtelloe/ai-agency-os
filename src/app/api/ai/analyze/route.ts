@@ -146,6 +146,62 @@ function extractSocials(text: string, html: string): string[] {
   return socials;
 }
 
+async function searchGoogleForContact(businessName: string, websiteUrl: string): Promise<string> {
+  try {
+    const domain = new URL(websiteUrl).hostname.replace('www.', '');
+    const queries = [
+      `"${businessName}" CEO OR director OR propietario OR fundador site:linkedin.com`,
+      `"${domain}" CEO OR director OR responsable site:linkedin.com`,
+      `"${businessName}" "quién está detrás" OR "fundada por" OR "creada por"`,
+    ];
+
+    const results: string[] = [];
+
+    for (const query of queries) {
+      try {
+        // Use Google's public search (no API key needed)
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=5&hl=es`;
+        const res = await fetch(searchUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'es-ES,es;q=0.9',
+          },
+          signal: AbortSignal.timeout(8000),
+        });
+
+        if (!res.ok) continue;
+
+        const html = await res.text();
+        // Extract text snippets from search results
+        const snippets = html
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/<style[\s\S]*?<\/style>/gi, '')
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        // Extract relevant chunks (around the business name mentions)
+        const relevantParts = snippets.slice(0, 3000);
+        if (relevantParts.length > 100) {
+          results.push(`Búsqueda: "${query}"\nResultados: ${relevantParts}`);
+        }
+
+        // Don't hammer Google — small delay between queries
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch {
+        continue;
+      }
+
+      // If we found something, don't need all queries
+      if (results.length >= 2) break;
+    }
+
+    return results.join('\n\n');
+  } catch {
+    return '';
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const token = getTokenFromRequest(request);
@@ -206,8 +262,14 @@ export async function POST(request: NextRequest) {
 
     if (insertError) throw insertError;
 
-    // Scrape
+    // Scrape website
     const scraped = await scrapeUrl(url);
+
+    // If no contact found in website, search Google + LinkedIn
+    const googleContactInfo = await searchGoogleForContact(scraped.title || new URL(url).hostname, url);
+    if (googleContactInfo) {
+      scraped.bodyText += `\n\n--- Resultados de búsqueda en Google/LinkedIn ---\n${googleContactInfo}`;
+    }
 
     // Analyze with Claude
     const rawResponse = await callClaude(ANALYZE_BUSINESS_SYSTEM, buildAnalyzePrompt(scraped));
