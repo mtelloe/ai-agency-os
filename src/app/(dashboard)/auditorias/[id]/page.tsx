@@ -63,10 +63,10 @@ function initEditForm(auditoria: Auditoria): EditForm {
     pricing_sugerido: { setup: auditoria.pricing_sugerido?.setup || 0, mensual: auditoria.pricing_sugerido?.mensual || 0 },
     automatizaciones_recomendadas: (auditoria.automatizaciones_recomendadas || []).map(a => ({ ...a })),
     agentes_recomendados: (auditoria.agentes_recomendados || []).map(a => ({ ...a })),
-    contacto_nombre: (auditoria as Record<string, unknown>).contacto_nombre as string || '',
-    contacto_cargo: (auditoria as Record<string, unknown>).contacto_cargo as string || '',
-    contacto_email: (auditoria as Record<string, unknown>).contacto_email as string || '',
-    contacto_telefono: (auditoria as Record<string, unknown>).contacto_telefono as string || '',
+    contacto_nombre: ((auditoria as unknown as Record<string, string>).contacto_nombre) || '',
+    contacto_cargo: ((auditoria as unknown as Record<string, string>).contacto_cargo) || '',
+    contacto_email: ((auditoria as unknown as Record<string, string>).contacto_email) || '',
+    contacto_telefono: ((auditoria as unknown as Record<string, string>).contacto_telefono) || '',
   };
 }
 
@@ -382,19 +382,19 @@ export default function AuditoriaDetailPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="text-xs text-muted-foreground">Nombre</p>
-                    <p className="text-sm font-medium">{(auditoria as Record<string, unknown>).contacto_nombre as string || 'No encontrado'}</p>
+                    <p className="text-sm font-medium">{((auditoria as unknown as Record<string, string>).contacto_nombre) || 'No encontrado'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Cargo</p>
-                    <p className="text-sm">{(auditoria as Record<string, unknown>).contacto_cargo as string || 'No encontrado'}</p>
+                    <p className="text-sm">{((auditoria as unknown as Record<string, string>).contacto_cargo) || 'No encontrado'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="text-sm">{(auditoria as Record<string, unknown>).contacto_email as string || 'No encontrado'}</p>
+                    <p className="text-sm">{((auditoria as unknown as Record<string, string>).contacto_email) || 'No encontrado'}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Teléfono</p>
-                    <p className="text-sm">{(auditoria as Record<string, unknown>).contacto_telefono as string || 'No encontrado'}</p>
+                    <p className="text-sm">{((auditoria as unknown as Record<string, string>).contacto_telefono) || 'No encontrado'}</p>
                   </div>
                 </div>
               )}
