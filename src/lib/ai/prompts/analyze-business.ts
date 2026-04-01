@@ -8,6 +8,9 @@ Responde SIEMPRE en JSON válido con esta estructura exacta (sin markdown, sin b
   "resumen_negocio": "Descripción del negocio en 2-3 frases",
   "cliente_ideal": "Perfil del cliente ideal del negocio",
   "servicios": "Servicios/productos principales que ofrece",
+  "idiomas_web": ["es", "en", "ca", "etc"],
+  "tiene_multiidioma": true,
+  "redes_sociales_detectadas": ["Instagram: @usuario", "Facebook: /pagina", "LinkedIn: /company/nombre", "TikTok: @usuario", "YouTube: /canal"],
   "problemas": ["Problema 1", "Problema 2", "Problema 3"],
   "oportunidades": ["Oportunidad 1", "Oportunidad 2", "Oportunidad 3"],
   "automatizaciones_recomendadas": [
@@ -20,17 +23,27 @@ Responde SIEMPRE en JSON válido con esta estructura exacta (sin markdown, sin b
   "roi_estimado": "Descripción del ROI esperado con cifras concretas",
   "pricing_sugerido": {"setup": 1500, "mensual": 300},
   "score_oportunidad": 75,
-  "contacto_nombre": "Nombre y apellido del dueño/responsable del negocio si se encuentra en la web",
-  "contacto_cargo": "Cargo de la persona (CEO, Propietario, Director, Responsable de marketing, etc.)",
-  "contacto_email": "Email de contacto encontrado en la web",
-  "contacto_telefono": "Teléfono encontrado en la web"
+  "contacto_nombre": "Nombre y apellido del dueño/responsable",
+  "contacto_cargo": "Cargo (CEO, Propietario, Director, etc.)",
+  "contacto_email": "Email de contacto",
+  "contacto_telefono": "Teléfono de contacto"
 }
 
-IMPORTANTE sobre los datos de contacto: Busca el nombre del propietario o responsable en secciones como "Sobre nosotros", "Equipo", "Quiénes somos", "Aviso legal", "Contacto", "Nuestro equipo", firmas de blog, testimonios del dueño, etc. Si no encuentras un nombre concreto, pon "No encontrado" en contacto_nombre. NUNCA inventes un nombre.
+REGLAS IMPORTANTES:
 
-El score_oportunidad (0-100) mide cuánto potencial tiene este negocio para beneficiarse de automatización e IA. Factores: nivel de digitalización actual, tamaño del negocio, sector, competencia, presencia online.
+1. REDES SOCIALES: Que no haya enlaces a redes sociales en la web NO significa que no tengan perfiles. Si en los resultados de búsqueda de Google/LinkedIn aparecen perfiles sociales del negocio, inclúyelos. Si se mencionan redes en el contenido (ej: "síguenos en Instagram") pero no hay enlace, busca el perfil probable (ej: @nombre_negocio). Indica siempre si los perfiles son "detectados en web", "encontrados en búsqueda" o "probables (no confirmados)".
 
-Sé específico y práctico. No uses frases genéricas. Personaliza todo al negocio concreto. Escribe en español de España, tutea siempre.`;
+2. IDIOMAS: Detecta si la web tiene selector de idioma, versiones en varios idiomas (ej: /en/, /ca/, /fr/), o contenido multilingüe. "tiene_multiidioma" debe ser true si detectas cualquier opción de cambio de idioma. Incluye todos los idiomas detectados en "idiomas_web". Si la web está solo en un idioma, igualmente indica cuál es.
+
+3. CONTACTO: Busca el nombre del propietario en: "Sobre nosotros", "Equipo", "Aviso legal", "Contacto", firmas de blog, resultados de búsqueda en Google/LinkedIn. Si no lo encuentras, pon "No encontrado". NUNCA inventes un nombre.
+
+4. PROBLEMAS: Sé honesto y específico. No digas "falta presencia en redes" si las redes existen pero no están enlazadas en la web — eso es un problema de visibilidad en web, no de ausencia de redes.
+
+5. OPORTUNIDADES: Adapta las oportunidades al tamaño y tipo real del negocio. No propongas lo mismo para un restaurante local que para una clínica con 5 sedes.
+
+El score_oportunidad (0-100) mide potencial para automatización e IA. Factores: digitalización actual, tamaño, sector, competencia, presencia online.
+
+Sé específico y práctico. Personaliza todo al negocio concreto. Español de España, tutea siempre.`;
 
 export function buildAnalyzePrompt(scrapedData: {
   url: string;
@@ -41,15 +54,17 @@ export function buildAnalyzePrompt(scrapedData: {
   contactInfo?: string;
   socialLinks?: string[];
 }): string {
-  return `Analiza este negocio basándote en los datos de su web:
+  return \`Analiza este negocio basándote en los datos de su web:
 
-URL: ${scrapedData.url}
-Título: ${scrapedData.title || 'No disponible'}
-Descripción meta: ${scrapedData.description || 'No disponible'}
-Encabezados principales: ${(scrapedData.headings || []).join(' | ')}
-Contenido principal (extracto): ${(scrapedData.bodyText || '').slice(0, 3000)}
-Información de contacto: ${scrapedData.contactInfo || 'No encontrada'}
-Redes sociales: ${(scrapedData.socialLinks || []).join(', ') || 'No encontradas'}
+URL: \${scrapedData.url}
+Título: \${scrapedData.title || 'No disponible'}
+Descripción meta: \${scrapedData.description || 'No disponible'}
+Encabezados principales: \${(scrapedData.headings || []).join(' | ')}
+Contenido principal (extracto): \${(scrapedData.bodyText || '').slice(0, 4000)}
+Información de contacto encontrada: \${scrapedData.contactInfo || 'No encontrada'}
+Redes sociales encontradas en la web: \${(scrapedData.socialLinks || []).join(', ') || 'No encontradas en el HTML — busca en los resultados de Google si hay perfiles sociales del negocio'}
 
-Genera el análisis completo en JSON.`;
+NOTA: Que no haya enlaces a redes sociales en el HTML no significa que no tengan perfiles. Analiza el nombre del negocio y busca en los resultados de búsqueda (si los hay) si aparecen perfiles de Instagram, Facebook, LinkedIn, etc. También detecta si la web tiene opción de cambiar de idioma.
+
+Genera el análisis completo en JSON.\`;
 }

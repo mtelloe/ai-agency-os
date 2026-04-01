@@ -114,12 +114,17 @@ async function basicScrape(url: string) {
 
     const extraText = extraPages.filter(Boolean).join('\n');
 
+    const detectedLangs = detectLanguages(mainHtml);
+    const langInfo = detectedLangs.length > 1
+      ? `\n--- Idiomas detectados: ${detectedLangs.join(', ')} (web multiidioma) ---`
+      : `\n--- Idioma: ${detectedLangs[0] || 'es'} ---`;
+
     return {
       url,
       title: titleMatch?.[1] || '',
       description: descMatch?.[1] || '',
       headings: h1Matches,
-      bodyText: mainText + extraText,
+      bodyText: mainText + extraText + langInfo,
       contactInfo: extractContact(mainText + extraText),
       socialLinks: extractSocials(mainText + extraText, mainHtml),
     };
@@ -137,13 +142,69 @@ function extractContact(text: string): string {
 function extractSocials(text: string, html: string): string[] {
   const combined = text + ' ' + html;
   const socials: string[] = [];
-  if (combined.includes('facebook.com') || combined.includes('fb.com')) socials.push('Facebook');
-  if (combined.includes('instagram.com')) socials.push('Instagram');
-  if (combined.includes('twitter.com') || combined.includes('x.com')) socials.push('X/Twitter');
-  if (combined.includes('linkedin.com')) socials.push('LinkedIn');
-  if (combined.includes('tiktok.com')) socials.push('TikTok');
-  if (combined.includes('youtube.com')) socials.push('YouTube');
+
+  // Extract actual URLs where possible
+  const fbMatch = combined.match(/(?:facebook\.com|fb\.com)\/[a-zA-Z0-9._-]+/i);
+  if (fbMatch) socials.push(`Facebook: ${fbMatch[0]}`);
+  else if (combined.includes('facebook.com') || combined.includes('fb.com')) socials.push('Facebook (enlace detectado)');
+
+  const igMatch = combined.match(/instagram\.com\/([a-zA-Z0-9._]+)/i);
+  if (igMatch) socials.push(`Instagram: @${igMatch[1]}`);
+  else if (combined.includes('instagram.com')) socials.push('Instagram (enlace detectado)');
+
+  const liMatch = combined.match(/linkedin\.com\/(?:company|in)\/([a-zA-Z0-9._-]+)/i);
+  if (liMatch) socials.push(`LinkedIn: ${liMatch[0]}`);
+  else if (combined.includes('linkedin.com')) socials.push('LinkedIn (enlace detectado)');
+
+  const twMatch = combined.match(/(?:twitter\.com|x\.com)\/([a-zA-Z0-9._]+)/i);
+  if (twMatch) socials.push(`X/Twitter: @${twMatch[1]}`);
+  else if (combined.includes('twitter.com') || combined.includes('x.com')) socials.push('X/Twitter (enlace detectado)');
+
+  const tkMatch = combined.match(/tiktok\.com\/@?([a-zA-Z0-9._]+)/i);
+  if (tkMatch) socials.push(`TikTok: @${tkMatch[1]}`);
+  else if (combined.includes('tiktok.com')) socials.push('TikTok (enlace detectado)');
+
+  if (combined.includes('youtube.com')) socials.push('YouTube (enlace detectado)');
+
+  // Detect social mentions without links (e.g., "Síguenos en Instagram")
+  if (socials.length === 0) {
+    if (/s[ií]guenos en instagram|@[a-zA-Z0-9._]+.*instagram/i.test(combined)) socials.push('Instagram (mencionado en texto, sin enlace)');
+    if (/s[ií]guenos en facebook/i.test(combined)) socials.push('Facebook (mencionado en texto, sin enlace)');
+    if (/s[ií]guenos en linkedin/i.test(combined)) socials.push('LinkedIn (mencionado en texto, sin enlace)');
+    if (/s[ií]guenos en tiktok/i.test(combined)) socials.push('TikTok (mencionado en texto, sin enlace)');
+  }
+
   return socials;
+}
+
+function detectLanguages(html: string): string[] {
+  const langs: string[] = [];
+
+  // Detect html lang attribute
+  const langAttr = html.match(/<html[^>]*lang=["']([a-z]{2})/i);
+  if (langAttr) langs.push(langAttr[1]);
+
+  // Detect language switcher patterns
+  const langPatterns = [
+    /hreflang=["']([a-z]{2})/gi,
+    /\/(?:es|en|ca|fr|de|pt|it|zh|ja|ko|ar|ru)\//g,
+    /lang=["']([a-z]{2})["']/gi,
+  ];
+
+  for (const pattern of langPatterns) {
+    const matches = [...html.matchAll(pattern)];
+    for (const m of matches) {
+      const lang = (m[1] || m[0].replace(/\//g, '')).toLowerCase().slice(0, 2);
+      if (lang.length === 2 && !langs.includes(lang)) langs.push(lang);
+    }
+  }
+
+  // Detect language selector UI elements
+  if (/class=["'][^"']*lang.*switch|wpml|polylang|translatepress|gtranslate|language.?selector/i.test(html)) {
+    if (!langs.includes('multiidioma')) langs.push('multiidioma');
+  }
+
+  return langs.length > 0 ? langs : ['es'];
 }
 
 async function searchGoogleForContact(businessName: string, websiteUrl: string): Promise<string> {
