@@ -8,10 +8,11 @@ import { useUser } from '@/hooks/use-user';
 import {
   LayoutDashboard, Cpu, ClipboardList, Sparkles, MessageSquare,
   PenTool, FileText, Users, Radar, Zap, BookOpen, LayoutTemplate,
-  CreditCard, ShieldCheck,
+  CreditCard, ShieldCheck, Rocket,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
+  { href: '/autopilot', label: 'Piloto automático', icon: Rocket },
   { href: '/', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/analizador', label: 'Analizador', icon: Cpu },
   { href: '/auditorias', label: 'Auditorías', icon: ClipboardList },
