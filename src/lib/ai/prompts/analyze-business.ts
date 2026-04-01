@@ -19,8 +19,14 @@ Responde SIEMPRE en JSON válido con esta estructura exacta (sin markdown, sin b
   "mejoras_web": ["Mejora 1", "Mejora 2"],
   "roi_estimado": "Descripción del ROI esperado con cifras concretas",
   "pricing_sugerido": {"setup": 1500, "mensual": 300},
-  "score_oportunidad": 75
+  "score_oportunidad": 75,
+  "contacto_nombre": "Nombre y apellido del dueño/responsable del negocio si se encuentra en la web",
+  "contacto_cargo": "Cargo de la persona (CEO, Propietario, Director, Responsable de marketing, etc.)",
+  "contacto_email": "Email de contacto encontrado en la web",
+  "contacto_telefono": "Teléfono encontrado en la web"
 }
+
+IMPORTANTE sobre los datos de contacto: Busca el nombre del propietario o responsable en secciones como "Sobre nosotros", "Equipo", "Quiénes somos", "Aviso legal", "Contacto", "Nuestro equipo", firmas de blog, testimonios del dueño, etc. Si no encuentras un nombre concreto, pon "No encontrado" en contacto_nombre. NUNCA inventes un nombre.
 
 El score_oportunidad (0-100) mide cuánto potencial tiene este negocio para beneficiarse de automatización e IA. Factores: nivel de digitalización actual, tamaño del negocio, sector, competencia, presencia online.
 

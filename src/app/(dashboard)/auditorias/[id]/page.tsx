@@ -44,6 +44,10 @@ interface EditForm {
   pricing_sugerido: { setup: number; mensual: number };
   automatizaciones_recomendadas: Array<{ nombre: string; descripcion: string; impacto: string }>;
   agentes_recomendados: Array<{ nombre: string; tipo: string; descripcion: string; precio: number }>;
+  contacto_nombre: string;
+  contacto_cargo: string;
+  contacto_email: string;
+  contacto_telefono: string;
 }
 
 function initEditForm(auditoria: Auditoria): EditForm {
@@ -59,6 +63,10 @@ function initEditForm(auditoria: Auditoria): EditForm {
     pricing_sugerido: { setup: auditoria.pricing_sugerido?.setup || 0, mensual: auditoria.pricing_sugerido?.mensual || 0 },
     automatizaciones_recomendadas: (auditoria.automatizaciones_recomendadas || []).map(a => ({ ...a })),
     agentes_recomendados: (auditoria.agentes_recomendados || []).map(a => ({ ...a })),
+    contacto_nombre: (auditoria as Record<string, unknown>).contacto_nombre as string || '',
+    contacto_cargo: (auditoria as Record<string, unknown>).contacto_cargo as string || '',
+    contacto_email: (auditoria as Record<string, unknown>).contacto_email as string || '',
+    contacto_telefono: (auditoria as Record<string, unknown>).contacto_telefono as string || '',
   };
 }
 
@@ -202,6 +210,10 @@ export default function AuditoriaDetailPage() {
           pricing_sugerido: editForm.pricing_sugerido,
           automatizaciones_recomendadas: editForm.automatizaciones_recomendadas,
           agentes_recomendados: editForm.agentes_recomendados,
+          contacto_nombre: editForm.contacto_nombre || null,
+          contacto_cargo: editForm.contacto_cargo || null,
+          contacto_email: editForm.contacto_email || null,
+          contacto_telefono: editForm.contacto_telefono || null,
         })
         .eq('id', id);
       if (error) throw error;
@@ -337,6 +349,57 @@ export default function AuditoriaDetailPage() {
               Generar scripts
             </Button>
           </div>
+
+          {/* Contacto detectado */}
+          <Card className="border-blue-500/20">
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <span className="h-4 w-4 text-blue-500">👤</span>
+                Contacto detectado
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {editing && editForm ? (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Nombre</p>
+                    <Input value={editForm.contacto_nombre} onChange={(e) => updateField('contacto_nombre', e.target.value)} placeholder="Nombre del contacto" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Cargo</p>
+                    <Input value={editForm.contacto_cargo} onChange={(e) => updateField('contacto_cargo', e.target.value)} placeholder="CEO, Director, etc." />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    <Input type="email" value={editForm.contacto_email} onChange={(e) => updateField('contacto_email', e.target.value)} placeholder="email@empresa.com" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Teléfono</p>
+                    <Input value={editForm.contacto_telefono} onChange={(e) => updateField('contacto_telefono', e.target.value)} placeholder="+34 600 000 000" />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Nombre</p>
+                    <p className="text-sm font-medium">{(auditoria as Record<string, unknown>).contacto_nombre as string || 'No encontrado'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Cargo</p>
+                    <p className="text-sm">{(auditoria as Record<string, unknown>).contacto_cargo as string || 'No encontrado'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Email</p>
+                    <p className="text-sm">{(auditoria as Record<string, unknown>).contacto_email as string || 'No encontrado'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Teléfono</p>
+                    <p className="text-sm">{(auditoria as Record<string, unknown>).contacto_telefono as string || 'No encontrado'}</p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Resumen */}
           <Card>

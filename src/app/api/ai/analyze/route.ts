@@ -166,6 +166,7 @@ export async function POST(request: NextRequest) {
       agentes_recomendados: Array<{ nombre: string; tipo: string; descripcion: string; precio: number }>;
       mejoras_web: string[]; roi_estimado: string;
       pricing_sugerido: { setup: number; mensual: number }; score_oportunidad: number;
+      contacto_nombre?: string; contacto_cargo?: string; contacto_email?: string; contacto_telefono?: string;
     }>(rawResponse);
 
     // Update audit
@@ -186,6 +187,10 @@ export async function POST(request: NextRequest) {
         pricing_sugerido: analysis.pricing_sugerido,
         raw_scraping: scraped,
         raw_ai_response: rawResponse,
+        contacto_nombre: analysis.contacto_nombre !== 'No encontrado' ? analysis.contacto_nombre : null,
+        contacto_cargo: analysis.contacto_cargo !== 'No encontrado' ? analysis.contacto_cargo : null,
+        contacto_email: analysis.contacto_email !== 'No encontrado' ? analysis.contacto_email : null,
+        contacto_telefono: analysis.contacto_telefono !== 'No encontrado' ? analysis.contacto_telefono : null,
         updated_at: new Date().toISOString(),
       })
       .eq('id', auditoria.id)
@@ -199,7 +204,14 @@ export async function POST(request: NextRequest) {
       const nombreEmpresa = scraped.title || new URL(url).hostname;
       const { data: empresa } = await db
         .from('empresas')
-        .insert({ workspace_id: workspaceId, nombre: nombreEmpresa, website: url, origen: 'scraping' })
+        .insert({
+          workspace_id: workspaceId,
+          nombre: nombreEmpresa,
+          website: url,
+          email: analysis.contacto_email !== 'No encontrado' ? analysis.contacto_email : null,
+          telefono: analysis.contacto_telefono !== 'No encontrado' ? analysis.contacto_telefono : null,
+          origen: 'scraping',
+        })
         .select('id')
         .single();
       if (empresa) {
