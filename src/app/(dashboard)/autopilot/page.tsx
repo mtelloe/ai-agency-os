@@ -375,9 +375,15 @@ export default function AutopilotPage() {
       toast.success('Campaña completada');
     } catch (err) {
       console.error('Autopilot error:', err);
-      toast.error(err instanceof Error ? err.message : 'Error en el piloto automatico');
+      toast.error(err instanceof Error ? err.message : 'Error en el piloto automático');
+      // Show results even if there was an error partway through
+      setFinished(true);
     } finally {
       setRunning(false);
+      // Scroll to results
+      setTimeout(() => {
+        document.getElementById('autopilot-results')?.scrollIntoView({ behavior: 'smooth' });
+      }, 300);
     }
   }
 
@@ -696,6 +702,7 @@ export default function AutopilotPage() {
 
       {/* ── Results section ─────────────────────────────────────────── */}
       {finished && (
+        <div id="autopilot-results"></div>
         <>
           {/* Summary card */}
           <Card className="bg-gradient-to-br from-primary/5 via-background to-primary/5 border-primary/20">
