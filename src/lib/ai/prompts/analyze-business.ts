@@ -54,17 +54,17 @@ export function buildAnalyzePrompt(scrapedData: {
   contactInfo?: string;
   socialLinks?: string[];
 }): string {
-  return \`Analiza este negocio basándote en los datos de su web:
+  return `Analiza este negocio basándote en los datos de su web:
 
-URL: \${scrapedData.url}
-Título: \${scrapedData.title || 'No disponible'}
-Descripción meta: \${scrapedData.description || 'No disponible'}
-Encabezados principales: \${(scrapedData.headings || []).join(' | ')}
-Contenido principal (extracto): \${(scrapedData.bodyText || '').slice(0, 4000)}
-Información de contacto encontrada: \${scrapedData.contactInfo || 'No encontrada'}
-Redes sociales encontradas en la web: \${(scrapedData.socialLinks || []).join(', ') || 'No encontradas en el HTML — busca en los resultados de Google si hay perfiles sociales del negocio'}
+URL: ${scrapedData.url}
+Título: ${scrapedData.title || 'No disponible'}
+Descripción meta: ${scrapedData.description || 'No disponible'}
+Encabezados principales: ${(scrapedData.headings || []).join(' | ')}
+Contenido principal (extracto): ${(scrapedData.bodyText || '').slice(0, 4000)}
+Información de contacto encontrada: ${scrapedData.contactInfo || 'No encontrada'}
+Redes sociales encontradas en la web: ${(scrapedData.socialLinks || []).join(', ') || 'No encontradas en el HTML — busca en los resultados de Google si hay perfiles sociales del negocio'}
 
 NOTA: Que no haya enlaces a redes sociales en el HTML no significa que no tengan perfiles. Analiza el nombre del negocio y busca en los resultados de búsqueda (si los hay) si aparecen perfiles de Instagram, Facebook, LinkedIn, etc. También detecta si la web tiene opción de cambiar de idioma.
 
-Genera el análisis completo en JSON.\`;
+Genera el análisis completo en JSON.`;
 }
