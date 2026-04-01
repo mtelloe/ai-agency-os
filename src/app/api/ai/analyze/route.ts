@@ -44,32 +44,84 @@ async function scrapeUrl(url: string) {
   }
 }
 
+async function fetchPage(pageUrl: string): Promise<string> {
+  try {
+    const res = await fetch(pageUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AIAgencyOS/1.0)' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return '';
+    return await res.text();
+  } catch {
+    return '';
+  }
+}
+
+function htmlToText(html: string): string {
+  return html.replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Pages where Spanish businesses typically have owner/contact info
+const CONTACT_PAGES = [
+  '/aviso-legal', '/legal', '/aviso_legal',
+  '/sobre-nosotros', '/about', '/quienes-somos', '/about-us',
+  '/contacto', '/contact', '/contacta',
+  '/equipo', '/team', '/nuestro-equipo',
+  '/politica-de-privacidad', '/privacidad', '/privacy',
+];
+
 async function basicScrape(url: string) {
   try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AIAgencyOS/1.0)' },
-      signal: AbortSignal.timeout(15000),
-    });
-    const html = await res.text();
+    // Scrape main page
+    const mainHtml = await fetchPage(url);
+    const titleMatch = mainHtml.match(/<title[^>]*>(.*?)<\/title>/i);
+    const descMatch = mainHtml.match(/<meta[^>]*name=["']description["'][^>]*content=["'](.*?)["']/i);
+    const h1Matches = [...mainHtml.matchAll(/<h1[^>]*>(.*?)<\/h1>/gi)].map(m => m[1].replace(/<[^>]+>/g, ''));
+    const mainText = htmlToText(mainHtml).slice(0, 3000);
 
-    const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
-    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["'](.*?)["']/i);
-    const h1Matches = [...html.matchAll(/<h1[^>]*>(.*?)<\/h1>/gi)].map(m => m[1].replace(/<[^>]+>/g, ''));
-    const bodyText = html.replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[\s\S]*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 5000);
+    // Find links to contact/about/legal pages from the main HTML
+    const baseUrl = new URL(url);
+    const foundLinks: string[] = [];
+    const linkMatches = [...mainHtml.matchAll(/href=["']([^"']+)["']/gi)];
+    for (const match of linkMatches) {
+      const href = match[1].toLowerCase();
+      if (CONTACT_PAGES.some(p => href.includes(p))) {
+        try {
+          const fullUrl = new URL(match[1], baseUrl.origin).href;
+          if (!foundLinks.includes(fullUrl)) foundLinks.push(fullUrl);
+        } catch { /* ignore invalid URLs */ }
+      }
+    }
+
+    // Also try common paths directly
+    for (const path of ['/aviso-legal', '/sobre-nosotros', '/contacto', '/equipo']) {
+      const tryUrl = `${baseUrl.origin}${path}`;
+      if (!foundLinks.includes(tryUrl)) foundLinks.push(tryUrl);
+    }
+
+    // Scrape up to 4 additional pages in parallel
+    const extraPages = await Promise.all(
+      foundLinks.slice(0, 4).map(async (pageUrl) => {
+        const html = await fetchPage(pageUrl);
+        if (!html) return '';
+        return `\n--- Página: ${pageUrl} ---\n${htmlToText(html).slice(0, 2000)}`;
+      })
+    );
+
+    const extraText = extraPages.filter(Boolean).join('\n');
 
     return {
       url,
       title: titleMatch?.[1] || '',
       description: descMatch?.[1] || '',
       headings: h1Matches,
-      bodyText,
-      contactInfo: extractContact(bodyText),
-      socialLinks: extractSocials(bodyText, html),
+      bodyText: mainText + extraText,
+      contactInfo: extractContact(mainText + extraText),
+      socialLinks: extractSocials(mainText + extraText, mainHtml),
     };
   } catch {
     return { url, title: '', description: '', headings: [], bodyText: '', contactInfo: '', socialLinks: [] };
