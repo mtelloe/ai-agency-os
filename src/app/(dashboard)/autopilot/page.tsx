@@ -702,8 +702,7 @@ export default function AutopilotPage() {
 
       {/* ── Results section ─────────────────────────────────────────── */}
       {finished && (
-        <div id="autopilot-results"></div>
-        <>
+        <div id="autopilot-results" className="space-y-6">
           {/* Summary card */}
           <Card className="bg-gradient-to-br from-primary/5 via-background to-primary/5 border-primary/20">
             <CardContent className="pt-6">
@@ -757,7 +756,7 @@ export default function AutopilotPage() {
               Lanzar otra campaña
             </Button>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
