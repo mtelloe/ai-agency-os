@@ -147,56 +147,64 @@ function extractSocials(text: string, html: string): string[] {
 }
 
 async function searchGoogleForContact(businessName: string, websiteUrl: string): Promise<string> {
+  const apifyToken = process.env.APIFY_API_TOKEN;
+  if (!apifyToken) return '';
+
   try {
     const domain = new URL(websiteUrl).hostname.replace('www.', '');
+
+    // Use Apify Google Search Scraper — no blocking, reliable results
     const queries = [
       `"${businessName}" CEO OR director OR propietario OR fundador site:linkedin.com`,
-      `"${domain}" CEO OR director OR responsable site:linkedin.com`,
-      `"${businessName}" "quién está detrás" OR "fundada por" OR "creada por"`,
+      `"${businessName}" "${domain}" email contacto responsable`,
     ];
 
-    const results: string[] = [];
+    const searchResults: string[] = [];
 
     for (const query of queries) {
       try {
-        // Use Google's public search (no API key needed)
-        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=5&hl=es`;
-        const res = await fetch(searchUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'es-ES,es;q=0.9',
-          },
-          signal: AbortSignal.timeout(8000),
-        });
+        const res = await fetch(
+          `https://api.apify.com/v2/acts/apify~google-search-scraper/run-sync-get-dataset-items?token=${apifyToken}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              queries: query,
+              maxPagesPerQuery: 1,
+              resultsPerPage: 5,
+              languageCode: 'es',
+              countryCode: 'es',
+            }),
+            signal: AbortSignal.timeout(30000),
+          }
+        );
 
         if (!res.ok) continue;
 
-        const html = await res.text();
-        // Extract text snippets from search results
-        const snippets = html
-          .replace(/<script[\s\S]*?<\/script>/gi, '')
-          .replace(/<style[\s\S]*?<\/style>/gi, '')
-          .replace(/<[^>]+>/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
+        const items = await res.json();
 
-        // Extract relevant chunks (around the business name mentions)
-        const relevantParts = snippets.slice(0, 3000);
-        if (relevantParts.length > 100) {
-          results.push(`Búsqueda: "${query}"\nResultados: ${relevantParts}`);
+        // Extract organic results
+        for (const item of items) {
+          if (item.organicResults) {
+            for (const result of item.organicResults.slice(0, 5)) {
+              const text = [result.title, result.description, result.url].filter(Boolean).join(' — ');
+              if (text.length > 20) {
+                searchResults.push(text);
+              }
+            }
+          }
         }
 
-        // Don't hammer Google — small delay between queries
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // One successful search is usually enough
+        if (searchResults.length >= 3) break;
       } catch {
         continue;
       }
-
-      // If we found something, don't need all queries
-      if (results.length >= 2) break;
     }
 
-    return results.join('\n\n');
+    if (searchResults.length === 0) return '';
+
+    return `Resultados de búsqueda en Google/LinkedIn para "${businessName}":\n${searchResults.join('\n')}`;
   } catch {
     return '';
   }
