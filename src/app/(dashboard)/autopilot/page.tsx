@@ -149,8 +149,17 @@ export default function AutopilotPage() {
       method: 'POST',
       body: JSON.stringify(body),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error en el servidor');
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      throw new Error(`Error del servidor (${res.status})`);
+    }
+    if (!res.ok) {
+      const msg = data?.error || `Error del servidor (${res.status})`;
+      toast.error(msg);
+      throw new Error(msg);
+    }
     return data;
   }
 
@@ -199,6 +208,7 @@ export default function AutopilotPage() {
           detail: 'Intenta con otro nicho o ciudad',
         });
         setRunning(false);
+        setFinished(true);
         return;
       }
 
