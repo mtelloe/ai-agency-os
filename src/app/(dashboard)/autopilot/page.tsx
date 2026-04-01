@@ -372,7 +372,7 @@ export default function AutopilotPage() {
       }
 
       setFinished(true);
-      toast.success('Campana completada');
+      toast.success('Campaña completada');
     } catch (err) {
       console.error('Autopilot error:', err);
       toast.error(err instanceof Error ? err.message : 'Error en el piloto automatico');
@@ -446,7 +446,7 @@ export default function AutopilotPage() {
         </div>
         <h1 className="text-3xl font-bold tracking-tight">Piloto automatico</h1>
         <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-          Lanza una campana completa con un click. Prospectamos, auditamos, generamos propuestas y enviamos emails. Todo automatico.
+          Lanza una campaña completa con un click. Prospectamos, auditamos, generamos propuestas y enviamos emails. Todo automatico.
         </p>
       </div>
 
@@ -459,7 +459,7 @@ export default function AutopilotPage() {
                 <Zap className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle>Configura tu campana</CardTitle>
+                <CardTitle>Configura tu campaña</CardTitle>
                 <CardDescription>
                   Define el nicho, la ciudad y la cantidad de empresas a prospectar
                 </CardDescription>
@@ -533,7 +533,7 @@ export default function AutopilotPage() {
               <CreditCard className="h-5 w-5 text-muted-foreground shrink-0" />
               <div>
                 <p className="text-sm">
-                  Esta campana costara aproximadamente{' '}
+                  Esta campaña costara aproximadamente{' '}
                   <span className="font-bold text-primary">{creditEstimate} creditos</span>
                 </p>
                 <p className="text-xs text-muted-foreground">
@@ -552,12 +552,12 @@ export default function AutopilotPage() {
               {running ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  Ejecutando campana...
+                  Ejecutando campaña...
                 </>
               ) : (
                 <>
                   <Rocket className="h-5 w-5" />
-                  Lanzar campana
+                  Lanzar campaña
                 </>
               )}
             </Button>
@@ -575,7 +575,7 @@ export default function AutopilotPage() {
               </div>
               <div>
                 <CardTitle>
-                  {finished ? 'Campana completada' : 'Ejecutando campana...'}
+                  {finished ? 'Campaña completada' : 'Ejecutando campaña...'}
                 </CardTitle>
                 <CardDescription>
                   {nicho} en {ciudad} &middot; {cantidad} empresas
@@ -704,7 +704,7 @@ export default function AutopilotPage() {
                 <div className="inline-flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-950/30 mx-auto">
                   <Check className="h-8 w-8 text-green-600" />
                 </div>
-                <h2 className="text-xl font-bold">Campana completada</h2>
+                <h2 className="text-xl font-bold">Campaña completada</h2>
                 <div className="flex flex-wrap items-center justify-center gap-3">
                   <Badge variant="secondary" className="text-sm px-3 py-1">
                     {prospects.length} empresas prospectadas
@@ -747,7 +747,7 @@ export default function AutopilotPage() {
             </Link>
             <Button onClick={reset} className="gap-2">
               <RotateCcw className="h-4 w-4" />
-              Lanzar otra campana
+              Lanzar otra campaña
             </Button>
           </div>
         </>
