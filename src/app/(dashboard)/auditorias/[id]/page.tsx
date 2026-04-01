@@ -70,6 +70,97 @@ function initEditForm(auditoria: Auditoria): EditForm {
   };
 }
 
+function ContactSection({ auditoria, auditoriaId }: { auditoria: Auditoria; auditoriaId: string }) {
+  const supabase = createClient();
+  const queryClient = useQueryClient();
+  const a = auditoria as unknown as Record<string, string>;
+  const hasName = !!a.contacto_nombre;
+
+  const [contacto, setContacto] = useState({
+    nombre: a.contacto_nombre || '',
+    cargo: a.contacto_cargo || '',
+    email: a.contacto_email || '',
+    telefono: a.contacto_telefono || '',
+  });
+  const [saving, setSaving] = useState(false);
+
+  async function saveContact() {
+    setSaving(true);
+    const { error } = await supabase
+      .from('auditorias')
+      .update({
+        contacto_nombre: contacto.nombre || null,
+        contacto_cargo: contacto.cargo || null,
+        contacto_email: contacto.email || null,
+        contacto_telefono: contacto.telefono || null,
+      })
+      .eq('id', auditoriaId);
+    setSaving(false);
+    if (error) {
+      toast.error('Error al guardar');
+    } else {
+      toast.success('Contacto guardado');
+      queryClient.invalidateQueries({ queryKey: ['auditoria', auditoriaId] });
+    }
+  }
+
+  return (
+    <Card className={hasName ? 'border-blue-500/20' : 'border-yellow-500/30 bg-yellow-500/5'}>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          {hasName ? (
+            <><span className="text-blue-500">👤</span> Contacto detectado</>
+          ) : (
+            <><AlertTriangle className="h-4 w-4 text-yellow-500" /> Contacto no encontrado — rellénalo para personalizar el cold email</>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Nombre *</p>
+            <Input
+              value={contacto.nombre}
+              onChange={(e) => setContacto(prev => ({ ...prev, nombre: e.target.value }))}
+              placeholder="Nombre del responsable"
+              className={!contacto.nombre ? 'border-yellow-500/50' : ''}
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Cargo</p>
+            <Input
+              value={contacto.cargo}
+              onChange={(e) => setContacto(prev => ({ ...prev, cargo: e.target.value }))}
+              placeholder="CEO, Director, Propietario..."
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Email</p>
+            <Input
+              type="email"
+              value={contacto.email}
+              onChange={(e) => setContacto(prev => ({ ...prev, email: e.target.value }))}
+              placeholder="email@empresa.com"
+            />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Teléfono</p>
+            <Input
+              value={contacto.telefono}
+              onChange={(e) => setContacto(prev => ({ ...prev, telefono: e.target.value }))}
+              placeholder="+34 600 000 000"
+            />
+          </div>
+        </div>
+        <Button size="sm" onClick={saveContact} disabled={saving}>
+          {saving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}
+          Guardar contacto
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AuditoriaDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -350,56 +441,8 @@ export default function AuditoriaDetailPage() {
             </Button>
           </div>
 
-          {/* Contacto detectado */}
-          <Card className="border-blue-500/20">
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <span className="h-4 w-4 text-blue-500">👤</span>
-                Contacto detectado
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {editing && editForm ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Nombre</p>
-                    <Input value={editForm.contacto_nombre} onChange={(e) => updateField('contacto_nombre', e.target.value)} placeholder="Nombre del contacto" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Cargo</p>
-                    <Input value={editForm.contacto_cargo} onChange={(e) => updateField('contacto_cargo', e.target.value)} placeholder="CEO, Director, etc." />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Email</p>
-                    <Input type="email" value={editForm.contacto_email} onChange={(e) => updateField('contacto_email', e.target.value)} placeholder="email@empresa.com" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Teléfono</p>
-                    <Input value={editForm.contacto_telefono} onChange={(e) => updateField('contacto_telefono', e.target.value)} placeholder="+34 600 000 000" />
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Nombre</p>
-                    <p className="text-sm font-medium">{((auditoria as unknown as Record<string, string>).contacto_nombre) || 'No encontrado'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Cargo</p>
-                    <p className="text-sm">{((auditoria as unknown as Record<string, string>).contacto_cargo) || 'No encontrado'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Email</p>
-                    <p className="text-sm">{((auditoria as unknown as Record<string, string>).contacto_email) || 'No encontrado'}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Teléfono</p>
-                    <p className="text-sm">{((auditoria as unknown as Record<string, string>).contacto_telefono) || 'No encontrado'}</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {/* Contacto — siempre editable inline */}
+          <ContactSection auditoria={auditoria} auditoriaId={id} />
 
           {/* Resumen */}
           <Card>
