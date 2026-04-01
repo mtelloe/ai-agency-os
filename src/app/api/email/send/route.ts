@@ -107,6 +107,21 @@ export async function POST(request: NextRequest) {
       scriptId,
     );
 
+    // Sync contact to MailerLite when email is actually sent
+    if (process.env.MAILERLITE_API_KEY) {
+      try {
+        const { addSubscriber } = await import('@/lib/email/mailerlite');
+        await addSubscriber({
+          email: to,
+          name: script.empresas?.nombre,
+          fields: {
+            company: script.empresas?.nombre || '',
+            website: script.empresas?.website || '',
+          },
+        });
+      } catch { /* silent fail */ }
+    }
+
     return NextResponse.json({ success: true, emailId: result.id });
   } catch (error) {
     console.error('Send email error:', error);

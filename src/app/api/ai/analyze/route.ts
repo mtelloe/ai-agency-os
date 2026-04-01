@@ -341,20 +341,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Auto-sync to MailerLite if configured
-    if (process.env.MAILERLITE_API_KEY && analysis.contacto_email && analysis.contacto_email !== 'No encontrado') {
-      try {
-        const { addSubscriber } = await import('@/lib/email/mailerlite');
-        await addSubscriber({
-          email: analysis.contacto_email,
-          name: analysis.contacto_nombre !== 'No encontrado' ? analysis.contacto_nombre : undefined,
-          fields: {
-            company: scraped.title || new URL(url).hostname,
-            website: url,
-          },
-        });
-      } catch { /* silent fail — don't break audit if mailerlite fails */ }
-    }
+    // MailerLite sync happens when the user sends an email, not on audit
 
     await logActivity(workspaceId, userId, 'auditoria_completada', `Auditoría completada: ${url}`, token, 'auditorias', auditoria.id);
 
