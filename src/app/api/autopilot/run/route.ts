@@ -9,6 +9,44 @@ import { spendCredit, logActivity, checkCredits } from '@/lib/credits';
 import { sendEmail } from '@/lib/email/resend';
 import { buildColdEmailHTML } from '@/lib/email/templates/cold-email-funnel';
 
+// ─── Quick scrape (fast, no Apify, no Google search — stays under 60s) ──
+async function quickScrape(url: string) {
+  try {
+    const res = await fetch(url, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AIAgencyOS/1.0)' },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) return { url, title: '', description: '', headings: [], bodyText: '', contactInfo: '', socialLinks: [] };
+    const html = await res.text();
+
+    const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
+    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["'](.*?)["']/i);
+    const h1Matches = [...html.matchAll(/<h1[^>]*>(.*?)<\/h1>/gi)].map(m => m[1].replace(/<[^>]+>/g, ''));
+    const bodyText = html
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 3000);
+
+    const emails = bodyText.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) || [];
+    const phones = bodyText.match(/(?:\+34|0034)?[\s.-]?(?:6|7|9)\d{1,2}[\s.-]?\d{3}[\s.-]?\d{3,4}/g) || [];
+
+    return {
+      url,
+      title: titleMatch?.[1] || '',
+      description: descMatch?.[1] || '',
+      headings: h1Matches,
+      bodyText,
+      contactInfo: [...new Set([...emails, ...phones])].join(', '),
+      socialLinks: [] as string[],
+    };
+  } catch {
+    return { url, title: '', description: '', headings: [], bodyText: '', contactInfo: '', socialLinks: [] };
+  }
+}
+
 // ─── Prospect system prompt (same as /api/ai/prospect) ──────────────
 const PROSPECT_SYSTEM_PROMPT = `Eres un experto en prospección de negocios locales en España.
 Tu tarea es generar datos REALISTAS de negocios para un nicho y ciudad determinados.
@@ -45,141 +83,6 @@ Devuelve un JSON con esta estructura exacta:
 }
 
 Genera exactamente ${cantidad} negocios con datos variados y realistas.`;
-}
-
-// ─── Scraping helpers (same as /api/ai/analyze) ─────────────────────
-
-async function fetchPage(pageUrl: string): Promise<string> {
-  try {
-    const res = await fetch(pageUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AIAgencyOS/1.0)' },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) return '';
-    return await res.text();
-  } catch {
-    return '';
-  }
-}
-
-function htmlToText(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function extractContact(text: string): string {
-  const emails = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) || [];
-  const phones = text.match(/(?:\+34|0034)?[\s.-]?(?:6|7|9)\d{1,2}[\s.-]?\d{3}[\s.-]?\d{3,4}/g) || [];
-  return [...new Set([...emails, ...phones])].join(', ');
-}
-
-function extractSocials(text: string, html: string): string[] {
-  const combined = text + ' ' + html;
-  const socials: string[] = [];
-  if (combined.includes('facebook.com') || combined.includes('fb.com')) socials.push('Facebook');
-  if (combined.includes('instagram.com')) socials.push('Instagram');
-  if (combined.includes('twitter.com') || combined.includes('x.com')) socials.push('X/Twitter');
-  if (combined.includes('linkedin.com')) socials.push('LinkedIn');
-  if (combined.includes('tiktok.com')) socials.push('TikTok');
-  if (combined.includes('youtube.com')) socials.push('YouTube');
-  return socials;
-}
-
-const CONTACT_PAGES = [
-  '/aviso-legal', '/legal', '/aviso_legal',
-  '/sobre-nosotros', '/about', '/quienes-somos', '/about-us',
-  '/contacto', '/contact', '/contacta',
-  '/equipo', '/team', '/nuestro-equipo',
-  '/politica-de-privacidad', '/privacidad', '/privacy',
-];
-
-async function scrapeUrl(url: string) {
-  const apifyToken = process.env.APIFY_API_TOKEN;
-  if (apifyToken) {
-    try {
-      const runResponse = await fetch(
-        `https://api.apify.com/v2/acts/apify~website-content-crawler/run-sync-get-dataset-items?token=${apifyToken}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            startUrls: [{ url }],
-            maxCrawlPages: 1,
-            crawlerType: 'cheerio',
-          }),
-          signal: AbortSignal.timeout(60000),
-        }
-      );
-      if (runResponse.ok) {
-        const items = await runResponse.json();
-        const page = items[0];
-        if (page) {
-          return {
-            url,
-            title: page.metadata?.title || '',
-            description: page.metadata?.description || '',
-            headings: page.metadata?.headers?.h1 || [],
-            bodyText: (page.text || '').slice(0, 5000),
-            contactInfo: extractContact(page.text || ''),
-            socialLinks: extractSocials(page.text || '', page.html || ''),
-          };
-        }
-      }
-    } catch { /* fall through to basic scrape */ }
-  }
-
-  // Basic scrape fallback
-  try {
-    const mainHtml = await fetchPage(url);
-    const titleMatch = mainHtml.match(/<title[^>]*>(.*?)<\/title>/i);
-    const descMatch = mainHtml.match(/<meta[^>]*name=["']description["'][^>]*content=["'](.*?)["']/i);
-    const h1Matches = [...mainHtml.matchAll(/<h1[^>]*>(.*?)<\/h1>/gi)].map(m => m[1].replace(/<[^>]+>/g, ''));
-    const mainText = htmlToText(mainHtml).slice(0, 3000);
-
-    const baseUrl = new URL(url);
-    const foundLinks: string[] = [];
-    const linkMatches = [...mainHtml.matchAll(/href=["']([^"']+)["']/gi)];
-    for (const match of linkMatches) {
-      const href = match[1].toLowerCase();
-      if (CONTACT_PAGES.some(p => href.includes(p))) {
-        try {
-          const fullUrl = new URL(match[1], baseUrl.origin).href;
-          if (!foundLinks.includes(fullUrl)) foundLinks.push(fullUrl);
-        } catch { /* ignore */ }
-      }
-    }
-
-    for (const path of ['/aviso-legal', '/sobre-nosotros', '/contacto', '/equipo']) {
-      const tryUrl = `${baseUrl.origin}${path}`;
-      if (!foundLinks.includes(tryUrl)) foundLinks.push(tryUrl);
-    }
-
-    const extraPages = await Promise.all(
-      foundLinks.slice(0, 4).map(async (pageUrl) => {
-        const html = await fetchPage(pageUrl);
-        if (!html) return '';
-        return `\n--- Página: ${pageUrl} ---\n${htmlToText(html).slice(0, 2000)}`;
-      })
-    );
-
-    const extraText = extraPages.filter(Boolean).join('\n');
-
-    return {
-      url,
-      title: titleMatch?.[1] || '',
-      description: descMatch?.[1] || '',
-      headings: h1Matches,
-      bodyText: mainText + extraText,
-      contactInfo: extractContact(mainText + extraText),
-      socialLinks: extractSocials(mainText + extraText, mainHtml),
-    };
-  } catch {
-    return { url, title: '', description: '', headings: [], bodyText: '', contactInfo: '', socialLinks: [] };
-  }
 }
 
 // ─── UUID validation ────────────────────────────────────────────────
@@ -385,8 +288,8 @@ async function handleAudit(
 
   if (insertError) throw insertError;
 
-  // Scrape
-  const scraped = await scrapeUrl(url);
+  // Quick scrape (no Apify, no Google — fast, stays under 60s)
+  const scraped = await quickScrape(url);
 
   // Analyze with Claude
   const rawResponse = await callClaude(ANALYZE_BUSINESS_SYSTEM, buildAnalyzePrompt(scraped));
