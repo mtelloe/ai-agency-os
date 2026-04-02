@@ -16,7 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { ListSkeleton } from '@/components/shared/loading-skeleton';
 import {
   AlertTriangle, CheckCircle, Lightbulb, Bot, Wrench, TrendingUp,
-  DollarSign, FileText, PenTool, Loader2, ArrowLeft, Pencil, Save, X, Plus, Send,
+  DollarSign, FileText, PenTool, Loader2, ArrowLeft, Pencil, Save, X, Plus, Send, Globe,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
@@ -197,6 +197,7 @@ export default function AuditoriaDetailPage() {
   const { authFetch } = useAuthFetch();
   const [generatingProposal, setGeneratingProposal] = useState(false);
   const [generatingScripts, setGeneratingScripts] = useState(false);
+  const [generatingWeb, setGeneratingWeb] = useState(false);
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editForm, setEditForm] = useState<EditForm | null>(null);
@@ -464,6 +465,38 @@ export default function AuditoriaDetailPage() {
             <Button variant="outline" onClick={handleGenerateScripts} disabled={generatingScripts}>
               {generatingScripts ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PenTool className="h-4 w-4 mr-2" />}
               Generar scripts
+            </Button>
+            <Button
+              variant="outline"
+              disabled={generatingWeb}
+              onClick={async () => {
+                if (!workspace || !user) return;
+                setGeneratingWeb(true);
+                try {
+                  const res = await authFetch('/api/ai/generate-website', {
+                    method: 'POST',
+                    body: JSON.stringify({ auditoriaId: id, workspaceId: workspace.id, userId: user.id }),
+                  });
+                  if (res.status === 402) { toast.error('Sin créditos'); return; }
+                  if (!res.ok) throw new Error('Error');
+                  const data = await res.json();
+                  if (data.deployUrl) {
+                    toast.success(`Web desplegada: ${data.deployUrl}`);
+                    queryClient.invalidateQueries({ queryKey: ['auditoria', id] });
+                  } else if (data.html) {
+                    // Download HTML for manual deploy
+                    const blob = new Blob([data.html], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url; a.download = 'index.html'; a.click();
+                    toast.success('Web generada. Descargada como index.html — súbela a Netlify manualmente.');
+                  }
+                } catch { toast.error('Error al generar la web'); }
+                finally { setGeneratingWeb(false); }
+              }}
+            >
+              {generatingWeb ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Globe className="h-4 w-4 mr-2" />}
+              Crear web demo
             </Button>
             {(auditoria as unknown as Record<string, string>).demo_url && (
               <Button
