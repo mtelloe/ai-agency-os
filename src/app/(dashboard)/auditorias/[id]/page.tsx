@@ -16,7 +16,7 @@ import { Separator } from '@/components/ui/separator';
 import { ListSkeleton } from '@/components/shared/loading-skeleton';
 import {
   AlertTriangle, CheckCircle, Lightbulb, Bot, Wrench, TrendingUp,
-  DollarSign, FileText, PenTool, Loader2, ArrowLeft, Pencil, Save, X, Plus,
+  DollarSign, FileText, PenTool, Loader2, ArrowLeft, Pencil, Save, X, Plus, Send,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
@@ -81,6 +81,8 @@ function ContactSection({ auditoria, auditoriaId }: { auditoria: Auditoria; audi
     cargo: a.contacto_cargo || '',
     email: a.contacto_email || '',
     telefono: a.contacto_telefono || '',
+    tipoOferta: a.tipo_oferta || 'automatizacion',
+    demoUrl: a.demo_url || '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -93,6 +95,8 @@ function ContactSection({ auditoria, auditoriaId }: { auditoria: Auditoria; audi
         contacto_cargo: contacto.cargo || null,
         contacto_email: contacto.email || null,
         contacto_telefono: contacto.telefono || null,
+        tipo_oferta: contacto.tipoOferta,
+        demo_url: contacto.demoUrl || null,
       })
       .eq('id', auditoriaId);
     setSaving(false);
@@ -149,6 +153,28 @@ function ContactSection({ auditoria, auditoriaId }: { auditoria: Auditoria; audi
               value={contacto.telefono}
               onChange={(e) => setContacto(prev => ({ ...prev, telefono: e.target.value }))}
               placeholder="+34 600 000 000"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">Tipo de oferta</p>
+            <select
+              value={contacto.tipoOferta}
+              onChange={(e) => setContacto(prev => ({ ...prev, tipoOferta: e.target.value }))}
+              className="w-full h-9 rounded-md border bg-background px-3 text-sm"
+            >
+              <option value="automatizacion">Automatización</option>
+              <option value="web">Web</option>
+              <option value="agente">Agente IA</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">URL de la demo</p>
+            <Input
+              value={contacto.demoUrl}
+              onChange={(e) => setContacto(prev => ({ ...prev, demoUrl: e.target.value }))}
+              placeholder="https://demo.netlify.app"
             />
           </div>
         </div>
@@ -430,7 +456,7 @@ export default function AuditoriaDetailPage() {
       {auditoria.estado === 'completada' && (
         <>
           {/* Actions */}
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button onClick={handleGenerateProposal} disabled={generatingProposal}>
               {generatingProposal ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
               Generar propuesta
@@ -439,6 +465,31 @@ export default function AuditoriaDetailPage() {
               {generatingScripts ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PenTool className="h-4 w-4 mr-2" />}
               Generar scripts
             </Button>
+            {(auditoria as unknown as Record<string, string>).demo_url && (
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  const a = auditoria as unknown as Record<string, string>;
+                  const email = a.contacto_email;
+                  if (!email) { toast.error('Rellena el email del contacto primero'); return; }
+                  if (!workspace || !user) return;
+                  const res = await authFetch('/api/email/send', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                      to: email, type: 'demo_offer', scriptId: id,
+                      workspaceId: workspace.id, userId: user.id,
+                      tipoOferta: a.tipo_oferta || 'automatizacion',
+                      demoUrl: a.demo_url,
+                    }),
+                  });
+                  if (res.ok) toast.success('Demo enviada por email');
+                  else toast.error('Error al enviar la demo');
+                }}
+              >
+                <Send className="h-4 w-4 mr-2" />
+                Enviar demo
+              </Button>
+            )}
           </div>
 
           {/* Contacto — siempre editable inline */}

@@ -3,6 +3,7 @@ import { createApiClient, getTokenFromRequest } from '@/lib/supabase/api-client'
 import { sendEmail } from '@/lib/email/resend';
 import { buildColdEmailHTML } from '@/lib/email/templates/cold-email-funnel';
 import { buildFollowUpHTML } from '@/lib/email/templates/follow-up';
+import { buildDemoOfferHTML } from '@/lib/email/templates/demo-offer';
 import { logActivity } from '@/lib/credits';
 
 export async function POST(request: NextRequest) {
@@ -13,19 +14,59 @@ export async function POST(request: NextRequest) {
     }
 
     const db = createApiClient(token);
-    const { to, scriptId, type, workspaceId, userId } = await request.json();
+    const { to, scriptId, type, workspaceId, userId, tipoOferta, demoUrl } = await request.json();
 
-    if (!to || !scriptId || !type || !workspaceId || !userId) {
+    if (!to || !type || !workspaceId || !userId) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 });
     }
 
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(scriptId) || !uuidRegex.test(workspaceId) || !uuidRegex.test(userId)) {
+    if (!uuidRegex.test(workspaceId) || !uuidRegex.test(userId)) {
       return NextResponse.json({ error: 'Formato de ID invalido' }, { status: 400 });
     }
 
-    if (!['cold_email', 'follow_up'].includes(type)) {
+    if (!['cold_email', 'follow_up', 'demo_offer'].includes(type)) {
       return NextResponse.json({ error: 'Tipo de email invalido' }, { status: 400 });
+    }
+
+    // Handle demo_offer type (no scriptId needed)
+    if (type === 'demo_offer') {
+      if (!demoUrl) return NextResponse.json({ error: 'Falta la URL de la demo' }, { status: 400 });
+
+      const { data: auditoria } = await db
+        .from('auditorias')
+        .select('*, empresas(nombre)')
+        .eq('id', scriptId) // scriptId is actually auditoriaId for demo_offer
+        .single();
+
+      const empresaNombre = auditoria?.empresas?.nombre || 'tu negocio';
+      const contactoNombre = (auditoria as Record<string, unknown>)?.contacto_nombre as string || empresaNombre;
+
+      const html = buildDemoOfferHTML({
+        tipo: (tipoOferta || 'automatizacion') as 'web' | 'agente' | 'automatizacion',
+        empresaNombre,
+        contactoNombre,
+        problemas: auditoria?.problemas || [],
+        demoUrl,
+        calUrl: 'https://cal.com/simedalavida',
+        agenciaNombre: 'Simedalavida',
+        agenciaEmail: 'info@simedalavida.com',
+      });
+
+      const result = await sendEmail({
+        to, subject: `Demo personalizada para ${empresaNombre}`, html,
+        from: 'Equipo de Simedalavida <noreply@simedalavida.com>',
+        replyTo: 'info@simedalavida.com',
+      });
+
+      if (!result.success) return NextResponse.json({ error: result.error }, { status: 500 });
+
+      await logActivity(workspaceId, userId, 'demo_enviada', `Demo enviada a ${empresaNombre} (${to})`, token);
+      return NextResponse.json({ success: true, emailId: result.id });
+    }
+
+    if (!scriptId || !uuidRegex.test(scriptId)) {
+      return NextResponse.json({ error: 'scriptId requerido' }, { status: 400 });
     }
 
     // Fetch script with linked auditoria and empresa
