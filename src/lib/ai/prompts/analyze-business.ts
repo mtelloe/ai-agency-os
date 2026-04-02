@@ -35,7 +35,7 @@ REGLAS IMPORTANTES:
 
 2. IDIOMAS: Detecta si la web tiene selector de idioma, versiones en varios idiomas (ej: /en/, /ca/, /fr/), o contenido multilingüe. "tiene_multiidioma" debe ser true si detectas cualquier opción de cambio de idioma. Incluye todos los idiomas detectados en "idiomas_web". Si la web está solo en un idioma, igualmente indica cuál es.
 
-3. CONTACTO: Busca el nombre del propietario en: "Sobre nosotros", "Equipo", "Aviso legal", "Contacto", firmas de blog, resultados de búsqueda en Google/LinkedIn. Si no lo encuentras, pon "No encontrado". NUNCA inventes un nombre.
+3. CONTACTO — MUY IMPORTANTE: En España, el AVISO LEGAL es obligatorio y SIEMPRE contiene: nombre completo del titular o razón social, CIF/NIF, dirección postal, teléfono y email. BUSCA PRIMERO en las secciones marcadas como "--- Página: .../aviso-legal ---" o "--- Página: .../legal ---" en el contenido. Si encuentras datos ahí, ÚSALOS — son los datos oficiales del negocio. También busca en: "Sobre nosotros", "Equipo", "Contacto", firmas de blog. Si no encuentras un nombre concreto, pon "No encontrado". NUNCA inventes un nombre. El teléfono y email del aviso legal son SIEMPRE fiables.
 
 4. PROBLEMAS: Sé honesto y específico. No digas "falta presencia en redes" si las redes existen pero no están enlazadas en la web — eso es un problema de visibilidad en web, no de ausencia de redes.
 

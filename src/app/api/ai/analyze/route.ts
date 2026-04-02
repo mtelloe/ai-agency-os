@@ -98,7 +98,8 @@ async function basicScrape(url: string) {
     }
 
     // Also try common paths directly
-    for (const path of ['/aviso-legal', '/sobre-nosotros', '/contacto', '/equipo']) {
+    // Aviso legal FIRST — legally required in Spain, always has owner name + contact
+    for (const path of ['/aviso-legal', '/legal', '/contacto', '/sobre-nosotros', '/equipo']) {
       const tryUrl = `${baseUrl.origin}${path}`;
       if (!foundLinks.includes(tryUrl)) foundLinks.push(tryUrl);
     }
