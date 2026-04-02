@@ -162,7 +162,7 @@ function ContactSection({ auditoria, auditoriaId }: { auditoria: Auditoria; audi
 }
 
 export default function AuditoriaDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams() as { [key: string]: string };
   const router = useRouter();
   const queryClient = useQueryClient();
   const supabase = createClient();

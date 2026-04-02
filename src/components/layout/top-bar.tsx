@@ -22,7 +22,7 @@ import { CreditsBadge } from './credits-badge';
 export function TopBar() {
   const { data: user } = useUser();
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const supabase = createClient();
   const [sheetOpen, setSheetOpen] = useState(false);
 

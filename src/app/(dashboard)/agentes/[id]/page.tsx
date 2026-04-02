@@ -19,7 +19,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 
 export default function EditAgentePage() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams() as { [key: string]: string };
   const router = useRouter();
   const supabase = createClient();
   const queryClient = useQueryClient();

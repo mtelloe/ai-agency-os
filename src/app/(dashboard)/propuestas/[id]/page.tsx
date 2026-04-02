@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 
 export default function PropuestaDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams() as { [key: string]: string };
   const supabase = createClient();
 
   const { data: propuesta, isLoading } = useQuery<Propuesta>({

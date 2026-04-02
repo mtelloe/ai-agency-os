@@ -32,7 +32,7 @@ export const ADMIN_ITEMS = [
 ];
 
 export function Sidebar() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
   const { data: user } = useUser();
 
   const isAdmin = user?.rol === 'owner' || user?.rol === 'admin';

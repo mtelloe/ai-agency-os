@@ -16,7 +16,7 @@ interface Message {
 }
 
 export default function ChatPage() {
-  const { agentId } = useParams<{ agentId: string }>();
+  const { agentId } = useParams() as { [key: string]: string };
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);

@@ -77,7 +77,7 @@ function ScriptCard({
 }
 
 export default function ScriptDetailPage() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams() as { [key: string]: string };
   const supabase = createClient();
   const { authFetch } = useAuthFetch();
 
