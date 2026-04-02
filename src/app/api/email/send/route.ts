@@ -51,8 +51,8 @@ export async function POST(request: NextRequest) {
       .eq('id', workspaceId)
       .single();
 
-    const agenciaNombre = workspace?.nombre || 'AI Agency OS';
-    const agenciaEmail = `contacto@simedalavida.com`;
+    const agenciaNombre = 'Simedalavida';
+    const agenciaEmail = 'info@simedalavida.com';
 
     let html: string;
     let subject: string;
@@ -65,8 +65,8 @@ export async function POST(request: NextRequest) {
         problemas: auditoria?.problemas || ['Oportunidades de mejora detectadas en tu web'],
         solucion: script.cold_email?.split('\n').slice(1).join(' ').substring(0, 300) || 'Podemos ayudarte a mejorar tus resultados con automatizacion e IA.',
         roi: auditoria?.roi_estimado || 'Mejora significativa en conversion y eficiencia',
-        ctaUrl: auditoria ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.simedalavida.com'}/propuestas?empresa=${empresa?.id || ''}` : '#',
-        ctaText: 'Ver propuesta personalizada',
+        ctaUrl: 'https://simedalavida.com/contacto',
+        ctaText: 'Reservar demo gratuita',
         agenciaNombre,
         agenciaEmail,
         psText: 'Esta propuesta se ha preparado especificamente para tu negocio. Solo te llevara 2 minutos revisarla.',
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         resumenOriginal: auditoria?.resumen_negocio
           ? `${auditoria.resumen_negocio.substring(0, 200)}...`
           : 'Detectamos varias oportunidades de mejora y automatizacion para tu negocio.',
-        ctaUrl: auditoria ? `${process.env.NEXT_PUBLIC_APP_URL || 'https://app.simedalavida.com'}/propuestas?empresa=${empresa?.id || ''}` : '#',
+        ctaUrl: 'https://simedalavida.com/contacto',
         agenciaNombre,
         agenciaEmail,
       });
@@ -90,7 +90,8 @@ export async function POST(request: NextRequest) {
       to,
       subject,
       html,
-      replyTo: agenciaEmail,
+      from: 'Equipo de Simedalavida <noreply@simedalavida.com>',
+      replyTo: 'info@simedalavida.com',
     });
 
     if (!result.success) {

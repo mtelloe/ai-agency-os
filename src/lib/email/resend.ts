@@ -18,7 +18,7 @@ export async function sendEmail(params: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: params.from || 'AI Agency OS <noreply@simedalavida.com>',
+        from: params.from || 'Equipo de Simedalavida <noreply@simedalavida.com>',
         to: [params.to],
         subject: params.subject,
         html: params.html,

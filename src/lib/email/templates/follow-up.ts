@@ -54,7 +54,7 @@ export function buildFollowUpHTML(data: {
                 Hola ${escapeHtml(data.contactoNombre)},
               </p>
               <p style="margin:16px 0 0 0;font-size:15px;line-height:1.7;color:#374151;">
-                Te escribi hace ${data.diasSinRespuesta} dias sobre las oportunidades que detectamos en <strong>${escapeHtml(data.empresaNombre)}</strong> y queria saber si tuviste oportunidad de revisarlo.
+                Te escribimos hace ${data.diasSinRespuesta} dias sobre las oportunidades que detectamos en <strong>${escapeHtml(data.empresaNombre)}</strong> y queriamos saber si tuviste oportunidad de revisarlo.
               </p>
               <p style="margin:16px 0 0 0;font-size:15px;line-height:1.7;color:#374151;">
                 Para refrescarte la memoria, esto es lo que encontramos:
@@ -81,7 +81,7 @@ export function buildFollowUpHTML(data: {
           <tr>
             <td style="padding:0 32px 8px 32px;">
               <p style="margin:0;font-size:15px;line-height:1.7;color:#374151;">
-                Entiendo que estais ocupados, pero creo que esto puede marcar una diferencia real en vuestros resultados. Si te parece bien, podemos agendar una llamada rapida de 15 minutos para verlo juntos.
+                Entendemos que estais ocupados, pero creemos que esto puede marcar una diferencia real en vuestros resultados. Si te parece bien, podemos agendar una llamada rapida de 15 minutos para verlo juntos.
               </p>
             </td>
           </tr>
@@ -93,7 +93,7 @@ export function buildFollowUpHTML(data: {
                 <tr>
                   <td style="border-radius:8px;background-color:#6366f1;">
                     <a href="${escapeHtml(data.ctaUrl)}" target="_blank" style="display:inline-block;padding:14px 40px;font-size:16px;font-weight:700;color:#ffffff;text-decoration:none;border-radius:8px;background-color:#6366f1;">
-                      Agendar llamada
+                      Agendar una llamada
                     </a>
                   </td>
                 </tr>
@@ -106,6 +106,9 @@ export function buildFollowUpHTML(data: {
             <td style="padding:0 32px 24px 32px;">
               <p style="margin:0;font-size:15px;line-height:1.7;color:#374151;">
                 Un saludo,
+              </p>
+              <p style="margin:4px 0 0 0;font-size:15px;line-height:1.7;color:#374151;font-weight:600;">
+                Equipo de ${escapeHtml(data.agenciaNombre)}
               </p>
             </td>
           </tr>

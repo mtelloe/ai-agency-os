@@ -74,7 +74,7 @@ export function buildColdEmailHTML(data: {
                 Hola ${escapeHtml(data.contactoNombre)},
               </p>
               <p style="margin:16px 0 0 0;font-size:15px;line-height:1.6;color:#374151;">
-                He analizado la web de <strong>${escapeHtml(data.empresaNombre)}</strong> y he encontrado oportunidades importantes que quiero compartir contigo.
+                Hemos analizado la web de <strong>${escapeHtml(data.empresaNombre)}</strong> y hemos encontrado oportunidades importantes que queremos compartir contigo.
               </p>
             </td>
           </tr>
@@ -145,6 +145,18 @@ export function buildColdEmailHTML(data: {
                   </td>
                 </tr>
               </table>
+            </td>
+          </tr>
+
+          <!-- Sign off -->
+          <tr>
+            <td style="padding:0 32px 8px 32px;">
+              <p style="margin:0;font-size:15px;line-height:1.7;color:#374151;">
+                Un saludo,
+              </p>
+              <p style="margin:4px 0 0 0;font-size:15px;line-height:1.7;color:#374151;font-weight:600;">
+                Equipo de ${escapeHtml(data.agenciaNombre)}
+              </p>
             </td>
           </tr>
 
