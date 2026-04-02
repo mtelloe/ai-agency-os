@@ -25,8 +25,8 @@ export default function ResetPasswordPage() {
   useEffect(() => {
     async function handleAuthCallback() {
       // Method 1: token_hash in URL (direct link from our custom email template)
-      const tokenHash = searchParams.get('token_hash');
-      const type = searchParams.get('type');
+      const tokenHash = searchParams?.get('token_hash');
+      const type = searchParams?.get('type');
 
       if (tokenHash && type === 'recovery') {
         const { error } = await supabase.auth.verifyOtp({
@@ -42,7 +42,7 @@ export default function ResetPasswordPage() {
       }
 
       // Method 2: code in URL (PKCE flow from Supabase default redirect)
-      const code = searchParams.get('code');
+      const code = searchParams?.get('code');
       if (code) {
         const { error } = await supabase.auth.exchangeCodeForSession(code);
         if (error) {
