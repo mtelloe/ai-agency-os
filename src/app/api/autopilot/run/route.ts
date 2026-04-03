@@ -8,6 +8,7 @@ import { parseJsonResponse } from '@/lib/ai/parsers';
 import { spendCredit, logActivity, checkCredits } from '@/lib/credits';
 import { sendEmail } from '@/lib/email/resend';
 import { buildColdEmailHTML } from '@/lib/email/templates/cold-email-funnel';
+import { searchGoogleMaps } from '@/lib/google-maps';
 
 // ─── Quick scrape (fast, no Apify, no Google search — stays under 60s) ──
 async function quickScrape(url: string) {
@@ -168,71 +169,64 @@ async function handleProspect(
   const spent2 = await spendCredit(workspaceId, userId, 'prospeccion', `Autopilot: Prospección (2/2) ${nicho} en ${ciudad}`, token);
   if (!spent2) return NextResponse.json({ error: 'No tienes créditos suficientes' }, { status: 402 });
 
-  // Call Claude
-  const rawResponse = await callClaude(PROSPECT_SYSTEM_PROMPT, buildProspectPrompt(nicho, ciudad, cantidad));
-  const parsed = parseJsonResponse<{
-    prospects: Array<{
-      nombre: string; website: string; telefono: string; email: string;
-      ciudad: string; nicho: string; score: number; valor_estimado: number;
-    }>;
-  }>(rawResponse);
+  // Search REAL businesses on Google Maps
+  const mapResults = await searchGoogleMaps(`${nicho} ${ciudad}`, cantidad);
 
-  if (!parsed.prospects || !Array.isArray(parsed.prospects)) {
-    throw new Error('La IA no generó prospecciones válidas');
+  if (mapResults.length === 0) {
+    return NextResponse.json({ error: 'No se encontraron negocios en Google Maps' }, { status: 404 });
   }
 
-  // Create empresas + leads
   const results: Array<{ empresaId: string; nombre: string; website: string; email: string }> = [];
 
-  for (const prospect of parsed.prospects) {
+  for (const biz of mapResults) {
+    let score = 70;
+    if (!biz.website) score += 15;
+    if ((biz.reviewsCount || 0) < 20) score += 5;
+    if ((biz.totalScore || 5) < 4.5) score += 5;
+    score = Math.min(95, Math.max(60, score));
+
     const { data: empresa, error: empresaError } = await db
       .from('empresas')
       .insert({
         workspace_id: workspaceId,
-        nombre: prospect.nombre,
-        website: prospect.website,
-        telefono: prospect.telefono,
-        email: prospect.email,
-        ciudad: prospect.ciudad,
-        nicho: prospect.nicho,
+        nombre: biz.title,
+        website: biz.website,
+        telefono: biz.phone,
+        ciudad: biz.city || ciudad,
+        nicho,
         origen: 'autopilot',
       })
       .select()
       .single();
 
-    if (empresaError) {
-      console.error('Error creating empresa:', empresaError);
-      continue;
-    }
+    if (empresaError) { console.error('Error creating empresa:', empresaError); continue; }
 
     const { error: leadError } = await db
       .from('leads')
       .insert({
         workspace_id: workspaceId,
         empresa_id: empresa.id,
-        nombre_contacto: `Responsable de ${prospect.nombre}`,
+        nombre_contacto: `Responsable de ${biz.title}`,
+        telefono: biz.phone,
         estado_pipeline: 'Nuevo',
-        score: Math.min(95, Math.max(60, prospect.score)),
-        valor_estimado: Math.min(3000, Math.max(500, prospect.valor_estimado)),
-        fuente: 'Autopilot',
+        score,
+        valor_estimado: biz.website ? 1000 : 2000,
+        fuente: 'Google Maps',
       })
       .select()
       .single();
 
-    if (leadError) {
-      console.error('Error creating lead:', leadError);
-      continue;
-    }
+    if (leadError) { console.error('Error creating lead:', leadError); continue; }
 
     results.push({
       empresaId: empresa.id,
-      nombre: prospect.nombre,
-      website: prospect.website,
-      email: prospect.email,
+      nombre: biz.title,
+      website: biz.website || '',
+      email: '',
     });
   }
 
-  await logActivity(workspaceId, userId, 'autopilot_prospeccion', `Autopilot: ${results.length} empresas prospectadas en ${ciudad}`, token);
+  await logActivity(workspaceId, userId, 'autopilot_prospeccion', `Autopilot: ${results.length} negocios reales de ${nicho} en ${ciudad}`, token);
 
   return NextResponse.json({ prospects: results, total: results.length });
 }
