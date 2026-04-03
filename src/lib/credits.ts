@@ -1,5 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Coste real por operación en EUR (basado en precios Claude API)
+export const COST_MAP: Record<string, number> = {
+  auditoria: 0.02,
+  propuesta: 0.02,
+  scripts: 0.02,
+  prospeccion: 0.03,
+  web_demo: 0.03,
+  agente: 0.01,
+  demo_enviada: 0.001,
+  registro: 0,
+};
+
 function getServerClient(accessToken?: string) {
   const client = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,6 +47,7 @@ export async function spendCredit(
   if (!canSpend) return false;
 
   const client = getServerClient(accessToken);
+  const costeEur = COST_MAP[accion] || 0.01;
 
   await client.rpc('increment_creditos_usados', { ws_id: workspaceId });
 
@@ -48,6 +61,7 @@ export async function spendCredit(
     balance_despues: available - 1,
     referencia_tipo: referenciaTipo,
     referencia_id: referenciaId,
+    coste_eur: costeEur,
   });
 
   return true;

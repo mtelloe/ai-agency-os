@@ -7,6 +7,7 @@ import { MetricCard } from '@/components/dashboard/metric-card';
 import { ActivityFeed } from '@/components/dashboard/activity-feed';
 import { QuickActions } from '@/components/dashboard/quick-actions';
 import { MetricCardSkeleton } from '@/components/shared/loading-skeleton';
+import { UsageCard } from '@/components/dashboard/usage-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PIPELINE_STAGES } from '@/lib/constants';
 import { ClipboardList, Users, Sparkles, FileText, TrendingUp, CreditCard } from 'lucide-react';
@@ -247,12 +248,13 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="space-y-6">
           <h2 className="text-lg font-semibold">Acciones rapidas</h2>
           <QuickActions />
         </div>
         <ActivityFeed />
+        <UsageCard />
       </div>
     </div>
   );
