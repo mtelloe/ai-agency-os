@@ -16,6 +16,36 @@ export async function callClaude(systemPrompt: string, userMessage: string): Pro
   return textBlock ? textBlock.text : '';
 }
 
+/**
+ * Call Claude with images (Vision) — for screenshot analysis
+ * imageUrls: array of image URLs to analyze
+ */
+export async function callClaudeVision(
+  systemPrompt: string,
+  userMessage: string,
+  imageUrls: string[],
+): Promise<string> {
+  const content: Array<{ type: 'text'; text: string } | { type: 'image'; source: { type: 'url'; url: string } }> = [];
+
+  // Add images first
+  for (const url of imageUrls) {
+    content.push({ type: 'image', source: { type: 'url', url } });
+  }
+
+  // Add text prompt
+  content.push({ type: 'text', text: userMessage });
+
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 2048,
+    system: systemPrompt,
+    messages: [{ role: 'user', content }],
+  });
+
+  const textBlock = response.content.find((block) => block.type === 'text');
+  return textBlock ? textBlock.text : '';
+}
+
 export async function callClaudeStream(
   systemPrompt: string,
   messages: Array<{ role: 'user' | 'assistant'; content: string }>,
