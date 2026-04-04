@@ -21,33 +21,58 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Datos de entrada inválidos' }, { status: 400 });
     }
 
+    // ─── Get existing businesses to avoid duplicates ───
+    const { data: existingEmpresas } = await db
+      .from('empresas')
+      .select('nombre, website, telefono')
+      .eq('workspace_id', workspaceId);
+
+    const existingNames = (existingEmpresas || []).map(e => e.nombre || '');
+    const existingWebsites = new Set(
+      (existingEmpresas || []).filter(e => e.website).map(e => {
+        try { return new URL(e.website!).hostname.replace('www.', '').toLowerCase(); }
+        catch { return e.website!.toLowerCase().replace('www.', ''); }
+      })
+    );
+    const existingPhones = new Set(
+      (existingEmpresas || []).filter(e => e.telefono).map(e => e.telefono!.replace(/\s/g, ''))
+    );
+
     // Spend 2 credits
     const spent1 = await spendCredit(workspaceId, userId, 'prospeccion', `Prospección: ${nicho} en ${ciudad}`, token);
     if (!spent1) return NextResponse.json({ error: 'No tienes créditos suficientes' }, { status: 402 });
     const spent2 = await spendCredit(workspaceId, userId, 'prospeccion', `Prospección (2/2): ${nicho} en ${ciudad}`, token);
     if (!spent2) return NextResponse.json({ error: 'No tienes créditos suficientes' }, { status: 402 });
 
-    // Search REAL businesses on Google Maps via Apify
+    // Search Google Maps — exclude businesses already in the system
     const query = `${nicho} ${ciudad}`;
-    const mapResults = await searchGoogleMaps(query, cantidad);
+    const mapResults = await searchGoogleMaps(query, cantidad, existingNames);
 
     if (mapResults.length === 0) {
-      return NextResponse.json({ error: 'No se encontraron negocios en Google Maps. Prueba con otro nicho o ciudad.' }, { status: 404 });
+      return NextResponse.json({ error: 'No se encontraron negocios NUEVOS en Google Maps. Puede que ya tengas todos los del área — prueba otro nicho o ciudad.' }, { status: 404 });
     }
 
     // Create empresas + leads from REAL data
     const createdLeads = [];
 
     for (const biz of mapResults) {
+      // Double-check deduplication by website and phone
+      if (biz.website) {
+        try {
+          const domain = new URL(biz.website).hostname.replace('www.', '').toLowerCase();
+          if (existingWebsites.has(domain)) continue;
+        } catch { /* skip */ }
+      }
+      if (biz.phone && existingPhones.has(biz.phone.replace(/\s/g, ''))) continue;
+
       // Calculate opportunity score based on real data
       let score = 70;
-      if (!biz.website) score += 15; // No web = high opportunity
-      if ((biz.reviewsCount || 0) < 20) score += 5; // Few reviews = opportunity
-      if ((biz.totalScore || 5) < 4.5) score += 5; // Lower rating = room for improvement
+      if (!biz.website) score += 15;
+      if ((biz.reviewsCount || 0) < 20) score += 5;
+      if ((biz.totalScore || 5) < 4.5) score += 5;
       score = Math.min(95, Math.max(60, score));
 
-      // Estimate value based on category
-      const valor = biz.website ? 1000 : 2000; // No web = higher value deal
+      const valor = biz.website ? 1000 : 2000;
 
       const { data: empresa, error: empresaError } = await db
         .from('empresas')
@@ -83,6 +108,14 @@ export async function POST(request: NextRequest) {
       if (leadError) { console.error('Error creating lead:', leadError); continue; }
 
       createdLeads.push({ ...lead, empresa });
+
+      // Track for within-batch dedup
+      existingNames.push(biz.title);
+      if (biz.website) {
+        try { existingWebsites.add(new URL(biz.website).hostname.replace('www.', '').toLowerCase()); }
+        catch { /* skip */ }
+      }
+      if (biz.phone) existingPhones.add(biz.phone.replace(/\s/g, ''));
     }
 
     await logActivity(workspaceId, userId, 'prospeccion_completada',

@@ -10,29 +10,73 @@ import { sendEmail } from '@/lib/email/resend';
 import { buildColdEmailHTML } from '@/lib/email/templates/cold-email-funnel';
 import { searchGoogleMaps } from '@/lib/google-maps';
 
-// ─── Quick scrape (fast, no Apify, no Google search — stays under 60s) ──
+// ─── Quick scrape (fast, no Apify — but still checks legal/contact pages) ──
+const QUICK_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+
+async function quickFetch(pageUrl: string, timeoutMs = 8000): Promise<string> {
+  try {
+    const res = await fetch(pageUrl, {
+      headers: { 'User-Agent': QUICK_UA, 'Accept': 'text/html,application/xhtml+xml', 'Accept-Language': 'es-ES,es;q=0.9' },
+      signal: AbortSignal.timeout(timeoutMs),
+      redirect: 'follow',
+    });
+    if (!res.ok) return '';
+    return await res.text();
+  } catch { return ''; }
+}
+
+function stripHtml(html: string): string {
+  let text = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<!--[\s\S]*?-->/g, '');
+  // Preserve links as "text (URL)"
+  text = text.replace(/<a\s[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi, (_, href, linkText) => {
+    const clean = linkText.replace(/<[^>]+>/g, '').trim();
+    if (href.startsWith('#') || href.startsWith('javascript:')) return clean;
+    return `${clean} (${href})`;
+  });
+  return text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function quickMetadata(html: string): string {
+  const meta: string[] = [];
+  if (/<meta[^>]*name=["']viewport["'][^>]*content=["'][^"']*width=device-width/i.test(html)) meta.push('WEB RESPONSIVE: Sí');
+  if (/treatwell|booksy|fresha/i.test(html)) meta.push('PLATAFORMA RESERVAS: Detectada');
+  const wa = html.match(/(?:wa\.me|api\.whatsapp\.com)[^"'\s]*/i);
+  if (wa) meta.push(`WHATSAPP: ${wa[0]}`);
+  else if (/whatsapp/i.test(html)) meta.push('WHATSAPP: Detectado');
+  return meta.length ? `\n--- Datos técnicos ---\n${meta.join('\n')}` : '';
+}
+
+function quickExtractContact(text: string): string {
+  const rawEmails = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) || [];
+  const emails = rawEmails.filter(e => !/\.(png|jpg|jpeg|gif|svg|webp|ico|css|js)$/i.test(e));
+  const phones: string[] = [];
+  for (const p of [/(?:\+34|0034)[\s.-]?[6-9]\d{1,2}[\s.-]?\d{2,3}[\s.-]?\d{2,3}[\s.-]?\d{0,3}/g, /\b[6789]\d{2}[\s.-]?\d{3}[\s.-]?\d{3}\b/g, /\b[6789]\d{2}[\s.-]?\d{2}[\s.-]?\d{2}[\s.-]?\d{2}\b/g]) {
+    phones.push(...(text.match(p) || []));
+  }
+  return [...new Set([...emails, ...phones.map(t => t.trim())])].join(', ');
+}
+
 async function quickScrape(url: string) {
   try {
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; AIAgencyOS/1.0)' },
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!res.ok) return { url, title: '', description: '', headings: [], bodyText: '', contactInfo: '', socialLinks: [] };
-    const html = await res.text();
+    const baseUrl = new URL(url);
 
-    const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
-    const descMatch = html.match(/<meta[^>]*name=["']description["'][^>]*content=["'](.*?)["']/i);
-    const h1Matches = [...html.matchAll(/<h1[^>]*>(.*?)<\/h1>/gi)].map(m => m[1].replace(/<[^>]+>/g, ''));
-    const bodyText = html
-      .replace(/<script[\s\S]*?<\/script>/gi, '')
-      .replace(/<style[\s\S]*?<\/style>/gi, '')
-      .replace(/<[^>]+>/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .slice(0, 3000);
+    // Fetch main page + legal/contact pages in parallel (3 pages max for speed)
+    const [mainHtml, legalHtml, contactHtml] = await Promise.all([
+      quickFetch(url),
+      quickFetch(`${baseUrl.origin}/aviso-legal`),
+      quickFetch(`${baseUrl.origin}/contacto`),
+    ]);
 
-    const emails = bodyText.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) || [];
-    const phones = bodyText.match(/(?:\+34|0034)?[\s.-]?(?:6|7|9)\d{1,2}[\s.-]?\d{3}[\s.-]?\d{3,4}/g) || [];
+    if (!mainHtml) return { url, title: '', description: '', headings: [], bodyText: '', contactInfo: '', socialLinks: [] };
+
+    const titleMatch = mainHtml.match(/<title[^>]*>(.*?)<\/title>/i);
+    const descMatch = mainHtml.match(/<meta[^>]*name=["']description["'][^>]*content=["'](.*?)["']/i);
+    const h1Matches = [...mainHtml.matchAll(/<h1[^>]*>(.*?)<\/h1>/gi)].map(m => m[1].replace(/<[^>]+>/g, ''));
+
+    let bodyText = stripHtml(mainHtml).slice(0, 2500);
+    if (legalHtml && legalHtml.length > 200) bodyText += `\n--- Página: ${baseUrl.origin}/aviso-legal ---\n${stripHtml(legalHtml).slice(0, 3000)}`;
+    if (contactHtml && contactHtml.length > 200) bodyText += `\n--- Página: ${baseUrl.origin}/contacto ---\n${stripHtml(contactHtml).slice(0, 2000)}`;
+    bodyText += quickMetadata(mainHtml);
 
     return {
       url,
@@ -40,7 +84,7 @@ async function quickScrape(url: string) {
       description: descMatch?.[1] || '',
       headings: h1Matches,
       bodyText,
-      contactInfo: [...new Set([...emails, ...phones])].join(', '),
+      contactInfo: quickExtractContact(bodyText),
       socialLinks: [] as string[],
     };
   } catch {
@@ -162,6 +206,25 @@ async function handleProspect(
 
   const db = createApiClient(token);
 
+  // ─── Get existing businesses in this workspace to avoid duplicates ───
+  const { data: existingEmpresas } = await db
+    .from('empresas')
+    .select('nombre, website, telefono')
+    .eq('workspace_id', workspaceId);
+
+  const existingNames = (existingEmpresas || []).map(e => e.nombre || '');
+  const existingWebsites = new Set(
+    (existingEmpresas || [])
+      .filter(e => e.website)
+      .map(e => {
+        try { return new URL(e.website!).hostname.replace('www.', '').toLowerCase(); }
+        catch { return e.website!.toLowerCase().replace('www.', ''); }
+      })
+  );
+  const existingPhones = new Set(
+    (existingEmpresas || []).filter(e => e.telefono).map(e => e.telefono!.replace(/\s/g, ''))
+  );
+
   // Spend 2 credits
   const spent1 = await spendCredit(workspaceId, userId, 'prospeccion', `Autopilot: Prospección ${nicho} en ${ciudad}`, token);
   if (!spent1) return NextResponse.json({ error: 'No tienes créditos suficientes' }, { status: 402 });
@@ -169,16 +232,25 @@ async function handleProspect(
   const spent2 = await spendCredit(workspaceId, userId, 'prospeccion', `Autopilot: Prospección (2/2) ${nicho} en ${ciudad}`, token);
   if (!spent2) return NextResponse.json({ error: 'No tienes créditos suficientes' }, { status: 402 });
 
-  // Search REAL businesses on Google Maps
-  const mapResults = await searchGoogleMaps(`${nicho} ${ciudad}`, cantidad);
+  // Search Google Maps — pass existing names so Apify fetches extras to compensate
+  const mapResults = await searchGoogleMaps(`${nicho} ${ciudad}`, cantidad, existingNames);
 
   if (mapResults.length === 0) {
-    return NextResponse.json({ error: 'No se encontraron negocios en Google Maps' }, { status: 404 });
+    return NextResponse.json({ error: 'No se encontraron negocios NUEVOS en Google Maps. Puede que ya tengas todos los del área.' }, { status: 404 });
   }
 
   const results: Array<{ empresaId: string; nombre: string; website: string; email: string }> = [];
 
   for (const biz of mapResults) {
+    // Double-check deduplication by website and phone
+    if (biz.website) {
+      try {
+        const domain = new URL(biz.website).hostname.replace('www.', '').toLowerCase();
+        if (existingWebsites.has(domain)) continue;
+      } catch { /* skip check */ }
+    }
+    if (biz.phone && existingPhones.has(biz.phone.replace(/\s/g, ''))) continue;
+
     let score = 70;
     if (!biz.website) score += 15;
     if ((biz.reviewsCount || 0) < 20) score += 5;
@@ -224,6 +296,14 @@ async function handleProspect(
       website: biz.website || '',
       email: '',
     });
+
+    // Track what we've added to avoid within-batch duplicates
+    existingNames.push(biz.title);
+    if (biz.website) {
+      try { existingWebsites.add(new URL(biz.website).hostname.replace('www.', '').toLowerCase()); }
+      catch { /* skip */ }
+    }
+    if (biz.phone) existingPhones.add(biz.phone.replace(/\s/g, ''));
   }
 
   await logActivity(workspaceId, userId, 'autopilot_prospeccion', `Autopilot: ${results.length} negocios reales de ${nicho} en ${ciudad}`, token);

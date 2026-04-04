@@ -35,13 +35,37 @@ REGLAS IMPORTANTES:
 
 2. IDIOMAS: Detecta si la web tiene selector de idioma, versiones en varios idiomas (ej: /en/, /ca/, /fr/), o contenido multilingüe. "tiene_multiidioma" debe ser true si detectas cualquier opción de cambio de idioma. Incluye todos los idiomas detectados en "idiomas_web". Si la web está solo en un idioma, igualmente indica cuál es.
 
-3. CONTACTO — MUY IMPORTANTE: En España, el AVISO LEGAL es obligatorio y SIEMPRE contiene: nombre completo del titular o razón social, CIF/NIF, dirección postal, teléfono y email. BUSCA PRIMERO en las secciones marcadas como "--- Página: .../aviso-legal ---" o "--- Página: .../legal ---" en el contenido. Si encuentras datos ahí, ÚSALOS — son los datos oficiales del negocio. También busca en: "Sobre nosotros", "Equipo", "Contacto", firmas de blog. Si no encuentras un nombre concreto, pon "No encontrado". NUNCA inventes un nombre. El teléfono y email del aviso legal son SIEMPRE fiables.
+3. CONTACTO — MUY IMPORTANTE: Busca datos de contacto siguiendo este orden de prioridad:
 
-4. PROBLEMAS: Sé honesto y específico. No digas "falta presencia en redes" si las redes existen pero no están enlazadas en la web — eso es un problema de visibilidad en web, no de ausencia de redes.
+   a) AVISO LEGAL / POLÍTICA DE PRIVACIDAD: En España es OBLIGATORIO publicar nombre del titular o razón social, CIF/NIF, dirección, teléfono y email. Busca en las secciones marcadas como "--- Página: .../aviso-legal ---", "--- Página: .../legal ---", "--- Página: .../politica-de-privacidad ---". Los datos del aviso legal son SIEMPRE los datos oficiales del negocio.
 
-5. OPORTUNIDADES: Adapta las oportunidades al tamaño y tipo real del negocio. No propongas lo mismo para un restaurante local que para una clínica con 5 sedes.
+   b) PÁGINA DE CONTACTO: Busca en "--- Página: .../contacto ---". Aquí suelen estar email, teléfono, dirección y a veces nombre del responsable.
 
-El score_oportunidad (0-100) mide potencial para automatización e IA. Factores: digitalización actual, tamaño, sector, competencia, presencia online.
+   c) SOBRE NOSOTROS / EQUIPO: Busca nombres propios con cargos (CEO, Director, Fundador, Propietario). Patrones típicos: "Mi nombre es X", "Fundada por X", "Equipo: X - CEO".
+
+   d) FOOTER / TEXTO GENERAL: Busca emails (info@, contacto@, nombre@), teléfonos (+34..., 6XX..., 9XX...), y CIF/NIF (formato: letra + 7 dígitos + letra, o 8 dígitos + letra).
+
+   e) RESULTADOS DE BÚSQUEDA: Si hay sección "--- Resultados de búsqueda ---", busca perfiles LinkedIn con cargos directivos.
+
+   REGLAS: Si encuentras CIF/NIF, inclúyelo en contacto_nombre junto al nombre (ej: "Juan García (CIF: B12345678)"). Si solo encuentras razón social sin nombre de persona, ponla como contacto_nombre. Si encuentras email genérico (info@, contacto@) úsalo — es mejor que "No encontrado". NUNCA inventes datos. Pon "No encontrado" SOLO si realmente no hay ningún dato en todo el contenido.
+
+4. PROBLEMAS — REGLA CRÍTICA: Solo reporta problemas que puedas DEMOSTRAR con los datos que tienes. NUNCA asumas que algo falta solo porque no lo ves en el texto:
+   - Si hay "--- Datos técnicos detectados ---" con "WEB RESPONSIVE: Sí" → la web ES responsive, no digas que no lo es
+   - Si ves enlaces a Treatwell, Booksy, Fresha u otra plataforma → SÍ tienen precios/reservas online, aunque no estén en la propia web
+   - Si ves un enlace de WhatsApp (wa.me) → SÍ tienen contacto por WhatsApp
+   - Si ves enlaces de Google Maps → SÍ tienen localización
+   - Si ves "PLATAFORMAS DE RESERVA/PRECIOS:" → el negocio USA esas plataformas
+   - Los links ahora se preservan como "texto (URL)" en el contenido — LÉELOS antes de decir que algo falta
+   - NO digas "no tienen precios" si los precios están en una plataforma externa enlazada
+   - NO digas "web básica" si la web tiene múltiples secciones, fotos, enlaces a plataformas, etc.
+   - NO digas "no es responsive" a menos que los datos técnicos lo confirmen
+   - Sé honesto: si no puedes verificar algo, di "no verificable" en vez de inventar un problema
+
+5. OPORTUNIDADES: Adapta las oportunidades al tamaño y tipo real del negocio. No propongas lo mismo para un restaurante local que para una clínica con 5 sedes. Reconoce lo que el negocio ya hace bien antes de proponer mejoras.
+
+6. ANÁLISIS JUSTO: Tu objetivo es ser ÚTIL, no alarmista. Si un negocio ya tiene buena presencia web, reconócelo. Un negocio con web responsive, WhatsApp, plataforma de reservas y redes sociales NO tiene una "presencia digital básica". Valora lo que ya tienen y propón mejoras REALES sobre esa base.
+
+El score_oportunidad (0-100) mide potencial para automatización e IA. Factores: digitalización actual, tamaño, sector, competencia, presencia online. Un negocio ya digitalizado puede tener score bajo (30-50) si ya tiene todo bien cubierto.
 
 Sé específico y práctico. Personaliza todo al negocio concreto. Español de España, tutea siempre.`;
 
@@ -60,11 +84,21 @@ URL: ${scrapedData.url}
 Título: ${scrapedData.title || 'No disponible'}
 Descripción meta: ${scrapedData.description || 'No disponible'}
 Encabezados principales: ${(scrapedData.headings || []).join(' | ')}
-Contenido principal (extracto): ${(scrapedData.bodyText || '').slice(0, 4000)}
-Información de contacto encontrada: ${scrapedData.contactInfo || 'No encontrada'}
-Redes sociales encontradas en la web: ${(scrapedData.socialLinks || []).join(', ') || 'No encontradas en el HTML — busca en los resultados de Google si hay perfiles sociales del negocio'}
 
-NOTA: Que no haya enlaces a redes sociales en el HTML no significa que no tengan perfiles. Analiza el nombre del negocio y busca en los resultados de búsqueda (si los hay) si aparecen perfiles de Instagram, Facebook, LinkedIn, etc. También detecta si la web tiene opción de cambiar de idioma.
+=== DATOS DE CONTACTO EXTRAÍDOS AUTOMÁTICAMENTE ===
+${scrapedData.contactInfo || 'No se encontraron datos de contacto automáticamente — busca en el texto de las páginas de abajo'}
+
+=== REDES SOCIALES ===
+${(scrapedData.socialLinks || []).join(', ') || 'No encontradas en el HTML — busca en resultados de Google si hay perfiles'}
+
+=== CONTENIDO DE LA WEB (extracto) ===
+${(scrapedData.bodyText || '').slice(0, 8000)}
+
+INSTRUCCIONES CRÍTICAS:
+1. Los "DATOS DE CONTACTO EXTRAÍDOS" de arriba vienen de mailto:, tel:, WhatsApp links y Schema.org JSON-LD — son FIABLES. Si hay emails y teléfonos ahí, ÚSALOS directamente en contacto_email y contacto_telefono.
+2. Los enlaces aparecen como "texto (URL)" en el contenido — LÉELOS.
+3. La sección "--- Datos técnicos detectados ---" son HECHOS verificados. NO los contradigas.
+4. NO inventes problemas que no puedas demostrar con los datos de arriba.
 
 Genera el análisis completo en JSON.`;
 }
