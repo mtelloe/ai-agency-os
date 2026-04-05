@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiClient, getTokenFromRequest } from '@/lib/supabase/api-client';
-import { callClaude, callClaudeVision } from '@/lib/ai/claude';
-import { parseJsonResponse } from '@/lib/ai/parsers';
+import { callClaudeVision } from '@/lib/ai/claude';
 import { spendCredit, logActivity } from '@/lib/credits';
 import { scrapeWithFirecrawl, extractBusinessData } from '@/lib/audit/firecrawl';
 import { getPageSpeed } from '@/lib/audit/pagespeed';
 import { takeScreenshots } from '@/lib/audit/screenshot';
 import { getGooglePlacesData } from '@/lib/audit/google-places';
-import { VISUAL_ANALYSIS_SYSTEM, buildVisualPrompt, AUDIT_SYNTHESIS_SYSTEM, buildSynthesisPrompt } from '@/lib/audit/prompts';
+import { VISUAL_ANALYSIS_SYSTEM, buildVisualPrompt } from '@/lib/audit/prompts';
+import { runAuditAgentPipeline } from '@/lib/audit/agents';
 
 // ─── Platform detection from links and content ─────────────────────────────
 
@@ -55,14 +55,24 @@ function detectPlatformsInLinks(sources: string[]): string[] {
   return found;
 }
 
+/** Case-insensitive check for "no encontrado" and similar empty values */
+function isEmptyContact(val: string | undefined | null): boolean {
+  if (!val) return true;
+  const lower = val.toLowerCase().trim();
+  return lower === 'no encontrado' || lower === 'no disponible' || lower === 'n/a' || lower === 'null' || lower === '';
+}
+
 export async function POST(request: NextRequest) {
+  let auditoriaId: string | null = null;
+  let db: ReturnType<typeof createApiClient> | null = null;
+
   try {
     const token = getTokenFromRequest(request);
     if (!token) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const db = createApiClient(token);
+    db = createApiClient(token);
     const { url, workspaceId, userId, empresaId } = await request.json();
 
     if (!url || !workspaceId || !userId) {
@@ -103,6 +113,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) throw insertError;
+    auditoriaId = auditoria.id;
 
     // ─────────────────────────────────────────────────────────────────────
     // STEP 1: Gather data from ALL sources in parallel
@@ -152,54 +163,48 @@ export async function POST(request: NextRequest) {
     }
 
     // ─────────────────────────────────────────────────────────────────────
-    // STEP 3: Final synthesis with Claude — ALL data combined
+    // STEP 3: Multi-agent audit pipeline (4 specialized agents)
     // ─────────────────────────────────────────────────────────────────────
 
-    const synthesisPrompt = buildSynthesisPrompt({
+    const pipelineResult = await runAuditAgentPipeline({
       url,
       markdown: scrapeResult.markdown,
       title: scrapeResult.title,
       description: scrapeResult.description,
-      scrapingMethod: scrapeResult.method,
       extractedData: extractResult.method !== 'none' ? extractResult as unknown as Record<string, unknown> : null,
       extractionMethod: extractResult.method,
       pagespeedMobile: pagespeedMobile as unknown as Record<string, unknown>,
       pagespeedDesktop: pagespeedDesktop as unknown as Record<string, unknown>,
       placesData: placesData as unknown as Record<string, unknown>,
       visualAnalysis,
-      hasScreenshots: screenshotUrls.length > 0,
       detectedPlatforms,
     });
 
-    const rawResponse = await callClaude(AUDIT_SYNTHESIS_SYSTEM, synthesisPrompt);
-    const analysis = parseJsonResponse<{
-      resumen_negocio: string; cliente_ideal: string; servicios: string;
-      problemas: string[]; oportunidades: string[];
-      automatizaciones_recomendadas: Array<{ nombre: string; descripcion: string; impacto: string }>;
-      agentes_recomendados: Array<{ nombre: string; tipo: string; descripcion: string; precio: number }>;
-      mejoras_web: string[]; roi_estimado: string;
-      pricing_sugerido: { setup: number; mensual: number }; score_oportunidad: number;
-      contacto_nombre?: string; contacto_cargo?: string; contacto_email?: string; contacto_telefono?: string;
-      analisis_visual?: string; pagespeed_resumen?: string; google_reviews_resumen?: string;
-    }>(rawResponse);
+    const analysis = pipelineResult.finalAudit;
 
     // ─────────────────────────────────────────────────────────────────────
-    // STEP 4: Merge contact data from all sources
+    // STEP 4: Merge contact data from all sources (case-insensitive)
     // ─────────────────────────────────────────────────────────────────────
 
-    // Priority: Firecrawl extract > Claude analysis > Google Places
+    // Priority: Firecrawl extract > Fact sheet (from aviso legal) > Claude QA > Google Places
+    const factContact = pipelineResult.factSheet.contacto;
+
     const contactEmail = extractResult.email
-      || (analysis.contacto_email !== 'No encontrado' ? analysis.contacto_email : null)
+      || (!isEmptyContact(factContact.email) ? factContact.email : null)
+      || (!isEmptyContact(analysis.contacto_email) ? analysis.contacto_email : null)
       || null;
     const contactPhone = extractResult.phone
-      || (analysis.contacto_telefono !== 'No encontrado' ? analysis.contacto_telefono : null)
+      || (!isEmptyContact(factContact.telefono) ? factContact.telefono : null)
+      || (!isEmptyContact(analysis.contacto_telefono) ? analysis.contacto_telefono : null)
       || placesData?.phone
       || null;
     const contactName = extractResult.owner_name
-      || (analysis.contacto_nombre !== 'No encontrado' ? analysis.contacto_nombre : null)
+      || (!isEmptyContact(factContact.nombre_titular) ? factContact.nombre_titular : null)
+      || (!isEmptyContact(analysis.contacto_nombre) ? analysis.contacto_nombre : null)
       || null;
     const contactCargo = extractResult.owner_title
-      || (analysis.contacto_cargo !== 'No encontrado' ? analysis.contacto_cargo : null)
+      || (!isEmptyContact(factContact.cargo) ? factContact.cargo : null)
+      || (!isEmptyContact(analysis.contacto_cargo) ? analysis.contacto_cargo : null)
       || null;
 
     // ─────────────────────────────────────────────────────────────────────
@@ -218,6 +223,7 @@ export async function POST(request: NextRequest) {
       placesData,
       screenshots,
       visualAnalysis,
+      detectedPlatforms,
       sources: {
         firecrawl: scrapeResult.method === 'firecrawl',
         jina: scrapeResult.method === 'jina',
@@ -228,25 +234,35 @@ export async function POST(request: NextRequest) {
         screenshotMobile: !!screenshots.mobileUrl,
         visualAnalysis: !!visualAnalysis,
       },
+      // Multi-agent pipeline metadata
+      agentPipeline: {
+        factSheet: pipelineResult.factSheet,
+        timings: pipelineResult.agentTimings,
+        qaCorrections: analysis.correcciones_realizadas || [],
+      },
     };
+
+    const scoreNum = typeof analysis.score_oportunidad === 'string'
+      ? parseInt(analysis.score_oportunidad, 10)
+      : analysis.score_oportunidad;
 
     const { data: updated, error: updateError } = await db
       .from('auditorias')
       .update({
         estado: 'completada',
-        score_oportunidad: Math.min(100, Math.max(0, analysis.score_oportunidad || 50)),
+        score_oportunidad: Math.min(100, Math.max(0, scoreNum || 50)),
         resumen_negocio: analysis.resumen_negocio,
         cliente_ideal: analysis.cliente_ideal,
         servicios: analysis.servicios,
-        problemas: analysis.problemas,
-        oportunidades: analysis.oportunidades,
-        automatizaciones_recomendadas: analysis.automatizaciones_recomendadas,
-        agentes_recomendados: analysis.agentes_recomendados,
-        mejoras_web: analysis.mejoras_web,
+        problemas: Array.isArray(analysis.problemas) ? analysis.problemas : [],
+        oportunidades: Array.isArray(analysis.oportunidades) ? analysis.oportunidades : [],
+        automatizaciones_recomendadas: Array.isArray(analysis.automatizaciones_recomendadas) ? analysis.automatizaciones_recomendadas : [],
+        agentes_recomendados: Array.isArray(analysis.agentes_recomendados) ? analysis.agentes_recomendados : [],
+        mejoras_web: Array.isArray(analysis.mejoras_web) ? analysis.mejoras_web : [],
         roi_estimado: analysis.roi_estimado,
         pricing_sugerido: analysis.pricing_sugerido,
         raw_scraping: rawScraping,
-        raw_ai_response: rawResponse,
+        raw_ai_response: JSON.stringify(pipelineResult.rawResponses),
         contacto_nombre: contactName,
         contacto_cargo: contactCargo,
         contacto_email: contactEmail,
@@ -284,6 +300,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Analyze error:', error);
+
+    // Save error state to DB so we can debug
+    if (auditoriaId && db) {
+      try {
+        await db.from('auditorias').update({
+          estado: 'error',
+          error_message: error instanceof Error ? error.message : 'Error desconocido',
+          updated_at: new Date().toISOString(),
+        }).eq('id', auditoriaId);
+      } catch (dbErr) {
+        console.error('Failed to save error state:', dbErr);
+      }
+    }
+
     return NextResponse.json(
       { error: 'Error al analizar. Inténtalo de nuevo más tarde.' },
       { status: 500 }
