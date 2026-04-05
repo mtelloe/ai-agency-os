@@ -45,6 +45,12 @@ IMPORTANTE:
 - NO inventes problemas. Solo reporta lo que los datos demuestran.
 - SÉ JUSTO: reconoce lo que hacen bien antes de señalar lo que falta.
 
+REGLA CRÍTICA SOBRE PLATAFORMAS EXTERNAS:
+- Si hay plataformas de reserva detectadas (Booksy, Treatwell, Fresha, Mindbody, etc.) → el negocio SÍ TIENE sistema de reservas y precios online. NO digas "no tienen precios visibles" ni "no tienen sistema de reservas". El hecho de que los precios estén en una plataforma externa y no en la propia web es normal y válido.
+- Si hay WhatsApp detectado → SÍ tienen canal de contacto directo. NO digas "no tienen forma de contacto rápida".
+- Si hay link a Glovo/UberEats/JustEat → SÍ tienen delivery. NO digas "no ofrecen delivery".
+- En los problemas, puedes SUGERIR que centralicen precios en su propia web como mejora, pero NO como si fuera un fallo o ausencia. La diferencia es: "Podrían mostrar precios directamente en su web además de en Booksy" (sugerencia) vs "No tienen precios visibles" (falso).
+
 Responde SIEMPRE en JSON válido (sin markdown, sin backticks):
 
 {
@@ -95,29 +101,36 @@ REGLAS PARA CONTACTO:
 
 export function buildSynthesisPrompt(data: {
   url: string;
-  // Firecrawl/Jina scraping
   markdown: string;
   title: string;
   description: string;
   scrapingMethod: string;
-  // Firecrawl extraction
   extractedData: Record<string, unknown> | null;
   extractionMethod: string;
-  // PageSpeed
   pagespeedMobile: Record<string, unknown> | null;
   pagespeedDesktop: Record<string, unknown> | null;
-  // Google Places
   placesData: Record<string, unknown> | null;
-  // Visual analysis
   visualAnalysis: string | null;
-  // Screenshots
   hasScreenshots: boolean;
+  detectedPlatforms: string[];
 }): string {
   const parts: string[] = [];
 
   parts.push(`=== AUDITORÍA DE: ${data.url} ===`);
   parts.push(`Título: ${data.title || 'No disponible'}`);
   parts.push(`Meta descripción: ${data.description || 'No disponible'}`);
+
+  // Detected platforms — CRITICAL for accurate audit
+  if (data.detectedPlatforms.length > 0) {
+    parts.push(`\n=== PLATAFORMAS EXTERNAS DETECTADAS (enlaces encontrados en la web) ===`);
+    parts.push(`IMPORTANTE: El negocio ENLAZA a estas plataformas desde su web:`);
+    for (const p of data.detectedPlatforms) {
+      parts.push(`  ✓ ${p}`);
+    }
+    parts.push(`→ Si hay plataformas de reserva (Booksy, Treatwell, Fresha, etc.) = el negocio SÍ tiene sistema de citas y precios online, aunque no estén directamente en su web.`);
+    parts.push(`→ Si hay WhatsApp = SÍ tienen contacto directo.`);
+    parts.push(`→ NO digas que "no tienen precios visibles" o "no tienen sistema de reservas" si hay una plataforma de reservas enlazada.`);
+  }
 
   // Extracted business data
   if (data.extractedData && data.extractionMethod !== 'none') {
@@ -151,7 +164,7 @@ export function buildSynthesisPrompt(data: {
   parts.push(`\n=== CONTENIDO DE LA WEB (markdown, ${data.scrapingMethod}) ===`);
   parts.push(data.markdown.slice(0, 6000));
 
-  parts.push(`\nGenera el JSON de auditoría completo. USA los datos reales de arriba, NO inventes.`);
+  parts.push(`\nGenera el JSON de auditoría completo. USA los datos reales de arriba, NO inventes. Si hay plataformas de reserva detectadas, el negocio SÍ tiene precios y reservas online.`);
 
   return parts.join('\n');
 }

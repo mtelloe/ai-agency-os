@@ -9,6 +9,52 @@ import { takeScreenshots } from '@/lib/audit/screenshot';
 import { getGooglePlacesData } from '@/lib/audit/google-places';
 import { VISUAL_ANALYSIS_SYSTEM, buildVisualPrompt, AUDIT_SYNTHESIS_SYSTEM, buildSynthesisPrompt } from '@/lib/audit/prompts';
 
+// ─── Platform detection from links and content ─────────────────────────────
+
+const PLATFORM_PATTERNS: Array<{ pattern: RegExp; name: string; type: 'booking' | 'reviews' | 'delivery' | 'payments' | 'social' }> = [
+  // Booking / Appointments / Prices
+  { pattern: /booksy\.com/i, name: 'Booksy (reservas + precios)', type: 'booking' },
+  { pattern: /treatwell\.(es|com)/i, name: 'Treatwell (reservas + precios)', type: 'booking' },
+  { pattern: /fresha\.com/i, name: 'Fresha (reservas + precios)', type: 'booking' },
+  { pattern: /doctolib/i, name: 'Doctolib (citas médicas)', type: 'booking' },
+  { pattern: /calendly\.com/i, name: 'Calendly (citas)', type: 'booking' },
+  { pattern: /setmore\.com/i, name: 'Setmore (citas)', type: 'booking' },
+  { pattern: /acuityscheduling\.com/i, name: 'Acuity Scheduling (citas)', type: 'booking' },
+  { pattern: /simplybook\.me/i, name: 'SimplyBook (reservas)', type: 'booking' },
+  { pattern: /mindbodyonline\.com|mindbody\.io/i, name: 'Mindbody (reservas + precios)', type: 'booking' },
+  { pattern: /vagaro\.com/i, name: 'Vagaro (reservas + precios)', type: 'booking' },
+  { pattern: /planyo\.com/i, name: 'Planyo (reservas)', type: 'booking' },
+  { pattern: /reservio\.com/i, name: 'Reservio (reservas)', type: 'booking' },
+  { pattern: /thefork\.com|eltenedor/i, name: 'TheFork/ElTenedor (reservas restaurante)', type: 'booking' },
+  { pattern: /covermanager\.com/i, name: 'CoverManager (reservas restaurante)', type: 'booking' },
+  { pattern: /booking\.com/i, name: 'Booking.com (reservas alojamiento)', type: 'booking' },
+  { pattern: /airbnb\.(com|es)/i, name: 'Airbnb', type: 'booking' },
+  // Delivery / Ecommerce
+  { pattern: /glovo\.com/i, name: 'Glovo (delivery)', type: 'delivery' },
+  { pattern: /ubereats\.com/i, name: 'Uber Eats (delivery)', type: 'delivery' },
+  { pattern: /justeat\.(es|com)/i, name: 'Just Eat (delivery)', type: 'delivery' },
+  { pattern: /deliveroo\.(es|com)/i, name: 'Deliveroo (delivery)', type: 'delivery' },
+  // Payments
+  { pattern: /paypal\.(com|me)/i, name: 'PayPal', type: 'payments' },
+  { pattern: /stripe\.com/i, name: 'Stripe (pagos online)', type: 'payments' },
+  { pattern: /bizum/i, name: 'Bizum', type: 'payments' },
+  // WhatsApp
+  { pattern: /wa\.me|api\.whatsapp\.com/i, name: 'WhatsApp (contacto directo)', type: 'social' },
+];
+
+function detectPlatformsInLinks(sources: string[]): string[] {
+  const combined = sources.join(' ');
+  const found: string[] = [];
+
+  for (const { pattern, name } of PLATFORM_PATTERNS) {
+    if (pattern.test(combined) && !found.includes(name)) {
+      found.push(name);
+    }
+  }
+
+  return found;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const token = getTokenFromRequest(request);
@@ -80,6 +126,12 @@ export async function POST(request: NextRequest) {
     const businessName = extractResult.business_name || scrapeResult.title || new URL(url).hostname;
     const placesData = await getGooglePlacesData(businessName, url);
 
+    // ─── Detect booking/pricing platforms in links ───
+    const detectedPlatforms = detectPlatformsInLinks([
+      ...scrapeResult.links,
+      scrapeResult.markdown, // also check the markdown content
+    ]);
+
     // ─────────────────────────────────────────────────────────────────────
     // STEP 2: Visual analysis with Claude Vision (if screenshots available)
     // ─────────────────────────────────────────────────────────────────────
@@ -116,6 +168,7 @@ export async function POST(request: NextRequest) {
       placesData: placesData as unknown as Record<string, unknown>,
       visualAnalysis,
       hasScreenshots: screenshotUrls.length > 0,
+      detectedPlatforms,
     });
 
     const rawResponse = await callClaude(AUDIT_SYNTHESIS_SYSTEM, synthesisPrompt);
