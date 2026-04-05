@@ -10,6 +10,13 @@ import { sendEmail } from '@/lib/email/resend';
 import { buildColdEmailHTML } from '@/lib/email/templates/cold-email-funnel';
 import { searchGoogleMaps } from '@/lib/google-maps';
 
+// Minimum score to proceed with proposal/scripts/email — businesses below this
+// already have most things covered and aren't worth pursuing commercially.
+const MIN_SCORE_TO_PURSUE = 70;
+
+// Allow longer execution for batch audits
+export const maxDuration = 300;
+
 // ─── Quick scrape (fast, no Apify — but still checks legal/contact pages) ──
 const QUICK_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
@@ -453,6 +460,24 @@ async function handleGenerate(
     return NextResponse.json({ error: 'Auditoría no encontrada o no completada' }, { status: 404 });
   }
 
+  // Score gate: only pursue businesses with real opportunities
+  const score = auditoria.score_oportunidad || 0;
+  if (score < MIN_SCORE_TO_PURSUE) {
+    // Update lead pipeline stage to indicate low opportunity
+    if (auditoria.empresa_id) {
+      await db.from('leads')
+        .update({ estado_pipeline: 'Descartado', notas: `Score ${score}/100 — ya tiene casi todo digitalizado. No merece perseguir.` })
+        .eq('empresa_id', auditoria.empresa_id)
+        .eq('workspace_id', workspaceId);
+    }
+
+    return NextResponse.json({
+      skipped: true,
+      reason: `Score ${score}/100 — este negocio ya tiene casi todo. No merece gastar créditos en propuesta.`,
+      score,
+    });
+  }
+
   // Check enough credits for proposal + scripts (2 credits)
   const { available } = await checkCredits(workspaceId, token);
   if (available < 2) {
@@ -567,6 +592,16 @@ async function handleSend(
 
   const auditoria = script.auditorias;
   const empresa = auditoria?.empresas;
+
+  // Don't send emails to businesses with low opportunity score
+  const score = auditoria?.score_oportunidad || 0;
+  if (score < MIN_SCORE_TO_PURSUE) {
+    return NextResponse.json({
+      skipped: true,
+      reason: `Score ${score}/100 — no merece enviar email a este negocio.`,
+    });
+  }
+
   const empresaNombre = empresa?.nombre || 'tu empresa';
   const contactoNombre = to.split('@')[0].split(/[._-]/).map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 

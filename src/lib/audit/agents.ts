@@ -1,11 +1,9 @@
 /**
- * Multi-agent audit pipeline
+ * Multi-agent audit pipeline — 3 agents
  *
- * 4 specialized agents instead of 1 monolithic prompt:
  * 1. Verificador de Hechos — structured fact sheet from raw data
- * 2. Auditor de Negocio — analysis, problems, opportunities
- * 3. Estratega Comercial — score, pricing, ROI, recommendations
- * 4. Control de Calidad — cross-check against verified data, remove hallucinations
+ * 2. Auditor + Estratega — analysis + what's MISSING + concrete service proposals
+ * 3. Control de Calidad — cross-check against verified data, remove hallucinations
  */
 
 import { callClaude } from '@/lib/ai/claude';
@@ -29,6 +27,7 @@ export interface FactSheet {
   };
   presencia_digital: {
     tiene_web: boolean;
+    calidad_web: string;
     plataformas_reserva: string[];
     redes_sociales: Array<{ red: string; url: string; seguidores?: string }>;
     delivery: string[];
@@ -36,6 +35,9 @@ export interface FactSheet {
     email_marketing: boolean;
     tiene_blog: boolean;
     tiene_tienda_online: boolean;
+    tiene_chatbot: boolean;
+    tiene_crm: boolean;
+    tiene_automatizaciones: boolean;
   };
   rendimiento_web: {
     mobile: { performance: number; seo: number; accessibility: number; best_practices: number } | null;
@@ -51,27 +53,6 @@ export interface FactSheet {
   tecnologias: string[];
 }
 
-export interface BusinessAudit {
-  resumen_negocio: string;
-  cliente_ideal: string;
-  servicios: string;
-  lo_que_hace_bien: string[];
-  problemas: string[];
-  oportunidades: string[];
-  mejoras_web: string[];
-  analisis_visual: string;
-  pagespeed_resumen: string;
-  google_reviews_resumen: string;
-}
-
-export interface CommercialStrategy {
-  score_oportunidad: number;
-  automatizaciones_recomendadas: Array<{ nombre: string; descripcion: string; impacto: string }>;
-  agentes_recomendados: Array<{ nombre: string; tipo: string; descripcion: string; precio: number }>;
-  roi_estimado: string;
-  pricing_sugerido: { setup: number; mensual: number };
-}
-
 export interface QualityCheckedAudit {
   resumen_negocio: string;
   cliente_ideal: string;
@@ -79,6 +60,13 @@ export interface QualityCheckedAudit {
   lo_que_hace_bien: string[];
   problemas: string[];
   oportunidades: string[];
+  servicios_a_ofrecer: Array<{
+    servicio: string;
+    porque: string;
+    evidencia: string;
+    prioridad: 'alta' | 'media' | 'baja';
+    precio_estimado: number;
+  }>;
   automatizaciones_recomendadas: Array<{ nombre: string; descripcion: string; impacto: string }>;
   agentes_recomendados: Array<{ nombre: string; tipo: string; descripcion: string; precio: number }>;
   mejoras_web: string[];
@@ -105,6 +93,7 @@ REGLAS:
 - Si un dato NO aparece en NINGUNA fuente, repórtalo como ausente.
 - NUNCA interpretes ni opines. Solo hechos.
 - Busca el aviso legal en el contenido web — en España contiene nombre, NIF, dirección, email, teléfono obligatoriamente.
+- Detecta si tiene chatbot, CRM, automatizaciones, email marketing — busca indicios en el contenido y tecnologías.
 
 Responde SOLO con JSON válido (sin markdown, sin backticks).`;
 
@@ -160,10 +149,8 @@ function buildFactCheckerPrompt(data: {
   const avisoLegalIdx = fullMarkdown.toLowerCase().indexOf('aviso legal');
   const politicaIdx = fullMarkdown.toLowerCase().indexOf('política de privacidad');
 
-  // Always include first 10000 chars
   let contentToSend = fullMarkdown.slice(0, 10000);
 
-  // If aviso legal is beyond 10000, include that section too
   if (avisoLegalIdx > 10000) {
     contentToSend += `\n\n--- [AVISO LEGAL encontrado en posición ${avisoLegalIdx}] ---\n`;
     contentToSend += fullMarkdown.slice(avisoLegalIdx, avisoLegalIdx + 3000);
@@ -194,13 +181,17 @@ function buildFactCheckerPrompt(data: {
   },
   "presencia_digital": {
     "tiene_web": true,
+    "calidad_web": "profesional/básica/anticuada/sin_web",
     "plataformas_reserva": ["Booksy", "etc"],
     "redes_sociales": [{"red": "Instagram", "url": "url", "seguidores": "10K si disponible"}],
     "delivery": ["Glovo", "etc"],
     "pagos_online": ["PayPal", "etc"],
     "email_marketing": true/false,
     "tiene_blog": true/false,
-    "tiene_tienda_online": true/false
+    "tiene_tienda_online": true/false,
+    "tiene_chatbot": true/false,
+    "tiene_crm": true/false,
+    "tiene_automatizaciones": true/false
   },
   "rendimiento_web": {
     "mobile": {"performance": 78, "seo": 92, "accessibility": 88, "best_practices": 90},
@@ -219,25 +210,46 @@ function buildFactCheckerPrompt(data: {
   return parts.join('\n');
 }
 
-// ─── Agent 2: Auditor de Negocio ─────────────────────────────────────────────
+// ─── Agent 2: Auditor + Estratega (combinado) ───────────────────────────────
 
-const BUSINESS_AUDITOR_SYSTEM = `Eres un auditor de negocio digital para PYMEs en España. Recibes un INFORME DE HECHOS VERIFICADOS.
+const AUDITOR_SYSTEM = `Eres un consultor de negocio digital para PYMEs en España. Recibes HECHOS VERIFICADOS de un negocio.
 
-Tu trabajo: analizar la situación digital del negocio basándote SOLO en los hechos.
+Tu trabajo tiene DOS partes:
 
-REGLAS:
-- Los hechos del informe son VERDAD. No los contradigas.
-- Si el informe dice que TIENE reservas, redes, contacto → LO TIENE. No lo listes como problema.
-- "problemas" = solo lo que FALTA según los hechos verificados.
-- "lo_que_hace_bien" es OBLIGATORIO — reconoce lo bueno primero.
-- "oportunidades" = solo cosas que NO TIENEN y les aportarían valor real.
-- Sé honesto: si el negocio está bien digitalizado, dilo.
+PARTE 1 — DIAGNÓSTICO HONESTO:
+- Los hechos son VERDAD. No los contradigas.
+- "lo_que_hace_bien" es OBLIGATORIO.
+- "problemas" = SOLO lo que FALTA o HACE MAL según los hechos.
+- Si tiene Booksy → NO es un problema. Si tiene Instagram → NO le faltan redes.
+
+PARTE 2 — QUÉ VENDERLE (lo más importante):
+Para cada cosa que NO TIENE o HACE MAL, propón un servicio concreto.
+Piensa como un vendedor: ¿qué le puedo ofrecer que REALMENTE necesite?
+
+Ejemplos de servicios concretos según lo que FALTA:
+- No tiene chatbot → "Agente IA para atención 24/7 en web"
+- Web lenta (PageSpeed < 50) → "Optimización de velocidad web"
+- No tiene automatizaciones → "Automatización de seguimiento post-visita"
+- No tiene email marketing → "Sistema de email marketing automatizado"
+- Pocas reseñas Google → "Estrategia de generación de reseñas"
+- No tiene reservas online → "Sistema de reservas integrado en web"
+- Web anticuada → "Rediseño web profesional"
+- No tiene blog/SEO → "Estrategia de contenido y SEO local"
+- Sin presencia en redes → "Gestión de redes sociales"
+
+SCORE = cuánto nos necesita (oportunidad de venta):
+- 85-100: Sin web o web inútil, sin nada digital → oportunidad máxima
+- 70-84: Web básica, le faltan varias cosas importantes → alta
+- 50-69: Web decente pero le faltan automatización, chatbot, SEO → media
+- 30-49: Web buena, tiene lo esencial, le faltan extras → baja-media
+- 15-29: Todo bien, solo mejoras puntuales → baja
+- 0-14: Completamente digitalizado → casi nada que ofrecer
 
 Español de España. Tutea.
 Responde SOLO con JSON válido (sin markdown, sin backticks).`;
 
-function buildBusinessAuditorPrompt(url: string, factSheet: FactSheet): string {
-  return `Analiza este negocio basándote ÚNICAMENTE en los hechos verificados:
+function buildAuditorPrompt(url: string, factSheet: FactSheet): string {
+  return `Analiza este negocio y propón servicios concretos para lo que le FALTA:
 
 URL: ${url}
 
@@ -248,87 +260,64 @@ Responde con este JSON:
 {
   "resumen_negocio": "Qué es, qué hace, en 2-3 frases",
   "cliente_ideal": "Perfil del cliente ideal de este negocio",
-  "servicios": "Servicios/productos principales",
-  "lo_que_hace_bien": ["Punto fuerte 1 basado en hechos", "Punto fuerte 2", "..."],
-  "problemas": ["Solo problemas DEMOSTRADOS por los hechos — si no hay datos que lo demuestren, NO lo incluyas"],
-  "oportunidades": ["Solo cosas que NO TIENEN y aportarían valor — nunca lo que ya tienen"],
-  "mejoras_web": ["Mejoras técnicas concretas basadas en PageSpeed y análisis visual"],
-  "analisis_visual": "Resumen de la impresión visual de la web",
-  "pagespeed_resumen": "Performance móvil X/100, desktop Y/100, SEO Z/100",
-  "google_reviews_resumen": "Rating X/5 con N reseñas"
-}`;
-}
-
-// ─── Agent 3: Estratega Comercial ────────────────────────────────────────────
-
-const COMMERCIAL_STRATEGIST_SYSTEM = `Eres un estratega comercial para una agencia de IA que vende servicios a PYMEs en España.
-
-Recibes un informe de hechos + una auditoría de negocio. Tu trabajo: evaluar la oportunidad comercial REAL.
-
-REGLAS ABSOLUTAS:
-- SCORE = OPORTUNIDAD DE VENTA, NO CALIDAD DEL NEGOCIO.
-  85-100: Sin web o completamente inútil → oportunidad máxima
-  70-84: Web muy básica, sin reservas, sin redes → alta
-  50-69: Web decente pero le faltan automatización, chatbot, SEO → media
-  30-49: Web buena, tiene lo esencial, le faltan extras → baja-media
-  15-29: Web profesional con reservas, redes, contacto → solo mejoras puntuales
-  0-14: Completamente digitalizado → casi nada que ofrecer
-
-- NO recomiendes automatizaciones ni agentes para cosas que YA TIENEN.
-- Si tiene Booksy → no recomiendes "sistema de reservas".
-- Si tiene Instagram activo → no recomiendes "presencia en redes".
-- Pricing realista para PYMEs españolas.
-- ROI honesto: si hay poco que ofrecer, el ROI es bajo.
-
-Español de España. Tutea.
-Responde SOLO con JSON válido (sin markdown, sin backticks).`;
-
-function buildCommercialStrategistPrompt(factSheet: FactSheet, audit: BusinessAudit): string {
-  return `Evalúa la oportunidad comercial:
-
-=== HECHOS VERIFICADOS ===
-${JSON.stringify(factSheet, null, 2)}
-
-=== AUDITORÍA DE NEGOCIO ===
-${JSON.stringify(audit, null, 2)}
-
-Responde con este JSON:
-{
-  "score_oportunidad": 45,
+  "servicios": "Servicios/productos principales del negocio",
+  "lo_que_hace_bien": ["Punto fuerte 1", "Punto fuerte 2"],
+  "problemas": ["Solo problemas REALES demostrados por los hechos"],
+  "oportunidades": ["Solo lo que NO TIENEN y aportaría valor"],
+  "servicios_a_ofrecer": [
+    {
+      "servicio": "Nombre del servicio concreto que le venderíamos",
+      "porque": "Por qué lo necesita — basado en un problema o carencia real",
+      "evidencia": "Dato concreto que demuestra que lo necesita (ej: 'PageSpeed mobile 28/100', 'no tiene chatbot')",
+      "prioridad": "alta/media/baja",
+      "precio_estimado": 300
+    }
+  ],
   "automatizaciones_recomendadas": [
-    {"nombre": "Nombre concreto", "descripcion": "Qué hace y por qué lo necesitan", "impacto": "Alto/Medio/Bajo"}
+    {"nombre": "Nombre", "descripcion": "Qué hace", "impacto": "Alto/Medio/Bajo"}
   ],
   "agentes_recomendados": [
-    {"nombre": "Nombre", "tipo": "chat_web/whatsapp/reservas/seguimiento", "descripcion": "Qué hace concretamente", "precio": 200}
+    {"nombre": "Nombre", "tipo": "chat_web/whatsapp/seguimiento", "descripcion": "Qué hace", "precio": 200}
   ],
-  "roi_estimado": "Estimación honesta del retorno — si no hay mucho que ofrecer, sé honesto",
-  "pricing_sugerido": {"setup": 500, "mensual": 100}
+  "mejoras_web": ["Mejoras técnicas concretas basadas en PageSpeed"],
+  "analisis_visual": "Resumen visual de la web",
+  "pagespeed_resumen": "Performance móvil X/100, desktop Y/100",
+  "google_reviews_resumen": "Rating X/5 con N reseñas",
+  "roi_estimado": "ROI honesto basado en lo que REALMENTE falta",
+  "pricing_sugerido": {"setup": 500, "mensual": 100},
+  "score_oportunidad": 45
 }
 
-IMPORTANTE: Si los hechos muestran que el negocio ya tiene casi todo (reservas, redes, contacto, buena web), el score debe ser 15-30 y las recomendaciones deben ser pocas y específicas.`;
+IMPORTANTE:
+- "servicios_a_ofrecer" es el campo MÁS IMPORTANTE. Cada servicio debe tener evidencia concreta.
+- Si el negocio ya tiene todo → pocos servicios, score bajo (15-30), pricing bajo.
+- Si le faltan muchas cosas → muchos servicios, score alto (70+), pricing proporcional.
+- NO propongas servicios para cosas que YA TIENE según los hechos.`;
 }
 
-// ─── Agent 4: Control de Calidad ─────────────────────────────────────────────
+// ─── Agent 3: Control de Calidad ─────────────────────────────────────────────
 
 const QA_SYSTEM = `Eres un controlador de calidad. Tu trabajo es COMPARAR una auditoría contra los hechos verificados y CORREGIR cualquier error.
 
 REGLAS:
-1. Lee los hechos verificados.
-2. Lee la auditoría y la estrategia.
+1. Lee los hechos verificados (VERDAD ABSOLUTA).
+2. Lee la auditoría.
 3. Busca CONTRADICCIONES:
    - ¿Se lista como "problema" algo que los hechos dicen que EXISTE? → ELIMINAR
-   - ¿Se recomienda algo que ya TIENEN según los hechos? → ELIMINAR
+   - ¿Se propone un "servicio_a_ofrecer" para algo que YA TIENE? → ELIMINAR
+   - ¿Se recomienda una automatización que ya tiene? → ELIMINAR
    - ¿El score no encaja con los hechos? → CORREGIR
    - ¿Falta algo en "lo_que_hace_bien" que los hechos demuestran? → AÑADIR
-4. Genera el JSON FINAL corregido.
-5. Lista TODAS las correcciones que hiciste en "correcciones_realizadas".
+4. VERIFICA cada "servicio_a_ofrecer": ¿la evidencia es real según los hechos? Si no → ELIMINAR
+5. Genera el JSON FINAL corregido.
+6. Lista TODAS las correcciones en "correcciones_realizadas".
 
-Si no hay correcciones necesarias, devuelve la auditoría tal cual con correcciones_realizadas: [].
+Si no hay correcciones, devuelve la auditoría tal cual con correcciones_realizadas: [].
 
 Español de España. Tutea.
 Responde SOLO con JSON válido (sin markdown, sin backticks).`;
 
-function buildQAPrompt(factSheet: FactSheet, audit: BusinessAudit, strategy: CommercialStrategy): string {
+function buildQAPrompt(factSheet: FactSheet, audit: Record<string, unknown>): string {
   return `Verifica esta auditoría contra los hechos y corrige errores:
 
 === HECHOS VERIFICADOS (VERDAD ABSOLUTA) ===
@@ -337,25 +326,26 @@ ${JSON.stringify(factSheet, null, 2)}
 === AUDITORÍA A VERIFICAR ===
 ${JSON.stringify(audit, null, 2)}
 
-=== ESTRATEGIA COMERCIAL A VERIFICAR ===
-${JSON.stringify(strategy, null, 2)}
-
-CHECKLIST DE VERIFICACIÓN:
-- ¿Algún "problema" contradice un hecho verificado? (ej: dice "sin reservas" pero tiene Booksy)
-- ¿Alguna "oportunidad" propone algo que ya tienen?
-- ¿Alguna "automatización recomendada" duplica funcionalidad existente?
+CHECKLIST:
+- ¿Algún "problema" contradice un hecho? → ELIMINAR
+- ¿Algún "servicio_a_ofrecer" propone algo que ya tienen? → ELIMINAR
+- ¿La "evidencia" de cada servicio es real según los hechos? → Si no, ELIMINAR
+- ¿Alguna automatización/agente duplica funcionalidad existente? → ELIMINAR
 - ¿El score es coherente con la presencia digital real?
-- ¿"lo_que_hace_bien" refleja todos los puntos fuertes demostrados por los hechos?
-- ¿Los datos de contacto son correctos según el aviso legal / extracción?
+- ¿"lo_que_hace_bien" refleja los puntos fuertes de los hechos?
+- ¿Los datos de contacto son correctos?
 
-Responde con el JSON FINAL COMPLETO (todos los campos juntos, ya corregidos):
+Responde con el JSON FINAL COMPLETO (ya corregido):
 {
   "resumen_negocio": "...",
   "cliente_ideal": "...",
   "servicios": "...",
   "lo_que_hace_bien": ["..."],
-  "problemas": ["solo problemas REALES que no contradicen los hechos"],
-  "oportunidades": ["solo oportunidades para lo que NO tienen"],
+  "problemas": ["solo problemas REALES"],
+  "oportunidades": ["solo lo que NO tienen"],
+  "servicios_a_ofrecer": [
+    {"servicio": "...", "porque": "...", "evidencia": "dato real", "prioridad": "alta/media/baja", "precio_estimado": 0}
+  ],
   "automatizaciones_recomendadas": [{"nombre": "...", "descripcion": "...", "impacto": "..."}],
   "agentes_recomendados": [{"nombre": "...", "tipo": "...", "descripcion": "...", "precio": 0}],
   "mejoras_web": ["..."],
@@ -369,7 +359,7 @@ Responde con el JSON FINAL COMPLETO (todos los campos juntos, ya corregidos):
   "contacto_cargo": "... | No encontrado",
   "contacto_email": "... | No encontrado",
   "contacto_telefono": "... | No encontrado",
-  "correcciones_realizadas": ["Descripción de cada corrección hecha"]
+  "correcciones_realizadas": ["Descripción de cada corrección"]
 }`;
 }
 
@@ -395,14 +385,12 @@ export interface AgentPipelineResult {
   rawResponses: {
     agent1_facts: string;
     agent2_audit: string;
-    agent3_strategy: string;
-    agent4_qa: string;
+    agent3_qa: string;
   };
   agentTimings: {
     agent1_ms: number;
     agent2_ms: number;
     agent3_ms: number;
-    agent4_ms: number;
     total_ms: number;
   };
 }
@@ -412,7 +400,7 @@ export async function runAuditAgentPipeline(input: AgentPipelineInput): Promise<
 
   // ─── Agent 1: Verificador de Hechos ───
   const t1 = Date.now();
-  console.log('[Audit Agent 1/4] Verificador de Hechos...');
+  console.log('[Audit Agent 1/3] Verificador de Hechos...');
   const agent1Prompt = buildFactCheckerPrompt({
     url: input.url,
     markdown: input.markdown,
@@ -428,31 +416,23 @@ export async function runAuditAgentPipeline(input: AgentPipelineInput): Promise<
   const raw1 = await callClaude(FACT_CHECKER_SYSTEM, agent1Prompt);
   const factSheet = parseJsonResponse<FactSheet>(raw1);
   const t1End = Date.now();
-  console.log(`[Audit Agent 1/4] Completado en ${t1End - t1}ms`);
+  console.log(`[Audit Agent 1/3] Completado en ${t1End - t1}ms`);
 
-  // ─── Agent 2: Auditor de Negocio ───
+  // ─── Agent 2: Auditor + Estratega ───
   const t2 = Date.now();
-  console.log('[Audit Agent 2/4] Auditor de Negocio...');
-  const raw2 = await callClaude(BUSINESS_AUDITOR_SYSTEM, buildBusinessAuditorPrompt(input.url, factSheet));
-  const audit = parseJsonResponse<BusinessAudit>(raw2);
+  console.log('[Audit Agent 2/3] Auditor + Estratega...');
+  const raw2 = await callClaude(AUDITOR_SYSTEM, buildAuditorPrompt(input.url, factSheet));
+  const audit = parseJsonResponse<Record<string, unknown>>(raw2);
   const t2End = Date.now();
-  console.log(`[Audit Agent 2/4] Completado en ${t2End - t2}ms`);
+  console.log(`[Audit Agent 2/3] Completado en ${t2End - t2}ms`);
 
-  // ─── Agent 3: Estratega Comercial ───
+  // ─── Agent 3: Control de Calidad ───
   const t3 = Date.now();
-  console.log('[Audit Agent 3/4] Estratega Comercial...');
-  const raw3 = await callClaude(COMMERCIAL_STRATEGIST_SYSTEM, buildCommercialStrategistPrompt(factSheet, audit));
-  const strategy = parseJsonResponse<CommercialStrategy>(raw3);
+  console.log('[Audit Agent 3/3] Control de Calidad...');
+  const raw3 = await callClaude(QA_SYSTEM, buildQAPrompt(factSheet, audit));
+  const finalAudit = parseJsonResponse<QualityCheckedAudit>(raw3);
   const t3End = Date.now();
-  console.log(`[Audit Agent 3/4] Completado en ${t3End - t3}ms`);
-
-  // ─── Agent 4: Control de Calidad ───
-  const t4 = Date.now();
-  console.log('[Audit Agent 4/4] Control de Calidad...');
-  const raw4 = await callClaude(QA_SYSTEM, buildQAPrompt(factSheet, audit, strategy));
-  const finalAudit = parseJsonResponse<QualityCheckedAudit>(raw4);
-  const t4End = Date.now();
-  console.log(`[Audit Agent 4/4] Completado en ${t4End - t4}ms`);
+  console.log(`[Audit Agent 3/3] Completado en ${t3End - t3}ms`);
 
   const totalEnd = Date.now();
   console.log(`[Audit Pipeline] Total: ${totalEnd - totalStart}ms | Correcciones QA: ${finalAudit.correcciones_realizadas?.length || 0}`);
@@ -463,14 +443,12 @@ export async function runAuditAgentPipeline(input: AgentPipelineInput): Promise<
     rawResponses: {
       agent1_facts: raw1,
       agent2_audit: raw2,
-      agent3_strategy: raw3,
-      agent4_qa: raw4,
+      agent3_qa: raw3,
     },
     agentTimings: {
       agent1_ms: t1End - t1,
       agent2_ms: t2End - t2,
       agent3_ms: t3End - t3,
-      agent4_ms: t4End - t4,
       total_ms: totalEnd - totalStart,
     },
   };

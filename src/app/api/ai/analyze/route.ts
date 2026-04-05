@@ -9,6 +9,9 @@ import { getGooglePlacesData } from '@/lib/audit/google-places';
 import { VISUAL_ANALYSIS_SYSTEM, buildVisualPrompt } from '@/lib/audit/prompts';
 import { runAuditAgentPipeline } from '@/lib/audit/agents';
 
+// Allow up to 5 minutes for the full audit pipeline (scraping + 3 Claude calls)
+export const maxDuration = 300;
+
 // ─── Platform detection from links and content ─────────────────────────────
 
 const PLATFORM_PATTERNS: Array<{ pattern: RegExp; name: string; type: 'booking' | 'reviews' | 'delivery' | 'payments' | 'social' }> = [
