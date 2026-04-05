@@ -21,13 +21,13 @@ function verifyN8nAuth(request: NextRequest): boolean {
 }
 
 /**
- * Handle "analyze-complete" action: update an auditoria with analysis results
+ * Handle "analyze-complete" action: update an auditoria with full analysis results
  */
 async function handleAnalyzeComplete(
   db: ReturnType<typeof getServerClient>,
   data: Record<string, unknown>,
 ): Promise<{ success: boolean; message: string }> {
-  const { auditoriaId, status, result } = data;
+  const { auditoriaId, status, result, empresaData } = data;
 
   if (!auditoriaId || typeof auditoriaId !== 'string') {
     return { success: false, message: 'Falta auditoriaId o formato invalido' };
@@ -43,20 +43,19 @@ async function handleAnalyzeComplete(
     updated_at: new Date().toISOString(),
   };
 
-  // If result data is provided, merge it into the update
+  // Merge all result fields
   if (result && typeof result === 'object') {
     const r = result as Record<string, unknown>;
-    if (r.score_oportunidad !== undefined) updatePayload.score_oportunidad = r.score_oportunidad;
-    if (r.resumen_negocio !== undefined) updatePayload.resumen_negocio = r.resumen_negocio;
-    if (r.problemas !== undefined) updatePayload.problemas = r.problemas;
-    if (r.oportunidades !== undefined) updatePayload.oportunidades = r.oportunidades;
-    if (r.automatizaciones_recomendadas !== undefined) updatePayload.automatizaciones_recomendadas = r.automatizaciones_recomendadas;
-    if (r.agentes_recomendados !== undefined) updatePayload.agentes_recomendados = r.agentes_recomendados;
-    if (r.mejoras_web !== undefined) updatePayload.mejoras_web = r.mejoras_web;
-    if (r.roi_estimado !== undefined) updatePayload.roi_estimado = r.roi_estimado;
-    if (r.pricing_sugerido !== undefined) updatePayload.pricing_sugerido = r.pricing_sugerido;
-    if (r.error_message !== undefined) updatePayload.error_message = r.error_message;
-    if (r.raw_ai_response !== undefined) updatePayload.raw_ai_response = r.raw_ai_response;
+    const fields = [
+      'score_oportunidad', 'resumen_negocio', 'cliente_ideal', 'servicios',
+      'problemas', 'oportunidades', 'automatizaciones_recomendadas',
+      'agentes_recomendados', 'mejoras_web', 'roi_estimado', 'pricing_sugerido',
+      'error_message', 'raw_ai_response', 'raw_scraping',
+      'contacto_nombre', 'contacto_cargo', 'contacto_email', 'contacto_telefono',
+    ];
+    for (const field of fields) {
+      if (r[field] !== undefined) updatePayload[field] = r[field];
+    }
   }
 
   const { error } = await db
@@ -67,6 +66,35 @@ async function handleAnalyzeComplete(
   if (error) {
     console.error(`[webhook-n8n] Error actualizando auditoria ${auditoriaId}:`, error);
     return { success: false, message: `Error al actualizar auditoria: ${error.message}` };
+  }
+
+  // Create/update empresa if data provided
+  if (empresaData && typeof empresaData === 'object' && estado === 'completada') {
+    const ed = empresaData as Record<string, unknown>;
+    const { data: auditoria } = await db
+      .from('auditorias')
+      .select('empresa_id, workspace_id')
+      .eq('id', auditoriaId)
+      .single();
+
+    if (auditoria && !auditoria.empresa_id && ed.nombre) {
+      const { data: empresa } = await db
+        .from('empresas')
+        .insert({
+          workspace_id: auditoria.workspace_id,
+          nombre: ed.nombre,
+          website: ed.website || null,
+          email: ed.email || null,
+          telefono: ed.telefono || null,
+          origen: 'scraping',
+        })
+        .select('id')
+        .single();
+
+      if (empresa) {
+        await db.from('auditorias').update({ empresa_id: empresa.id }).eq('id', auditoriaId);
+      }
+    }
   }
 
   console.log(`[webhook-n8n] Auditoria ${auditoriaId} actualizada a estado: ${estado}`);
@@ -88,7 +116,7 @@ async function handleLeadUpdate(
 
   const validStages = [
     'Nuevo', 'Auditado', 'Contactado', 'Demo creada',
-    'Propuesta enviada', 'Follow-up', 'Ganado', 'Perdido',
+    'Propuesta enviada', 'Follow-up', 'Ganado', 'Perdido', 'Descartado',
   ];
 
   if (!estado_pipeline || typeof estado_pipeline !== 'string' || !validStages.includes(estado_pipeline)) {
@@ -98,7 +126,6 @@ async function handleLeadUpdate(
     };
   }
 
-  // Fetch current lead to log the transition
   const { data: currentLead } = await db
     .from('leads')
     .select('workspace_id, nombre_contacto, estado_pipeline')
@@ -121,7 +148,6 @@ async function handleLeadUpdate(
     return { success: false, message: `Error al actualizar lead: ${error.message}` };
   }
 
-  // Log activity if we have the workspace context
   if (currentLead) {
     await db.from('actividad').insert({
       workspace_id: currentLead.workspace_id,
@@ -144,19 +170,12 @@ async function handleLeadUpdate(
 
 /**
  * POST /api/webhooks/n8n
- *
- * Generic webhook endpoint for n8n to call for various triggers.
- * Accepts { action: string, data: Record<string, unknown> } and routes
- * to the appropriate handler based on the action.
  */
 export async function POST(request: NextRequest) {
   try {
     if (!verifyN8nAuth(request)) {
       console.error('[webhook-n8n] Autenticacion fallida: X-N8N-API-KEY invalida');
-      return NextResponse.json(
-        { error: 'No autorizado' },
-        { status: 401 },
-      );
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
     let body: { action?: string; data?: Record<string, unknown> };
@@ -164,20 +183,14 @@ export async function POST(request: NextRequest) {
       body = await request.json();
     } catch {
       console.error('[webhook-n8n] Error al parsear body del request');
-      return NextResponse.json(
-        { error: 'Body JSON invalido' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Body JSON invalido' }, { status: 400 });
     }
 
     const { action, data } = body;
 
     if (!action || typeof action !== 'string') {
       console.error('[webhook-n8n] Falta el campo action en el body');
-      return NextResponse.json(
-        { error: 'Falta el campo action' },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: 'Falta el campo action' }, { status: 400 });
     }
 
     console.log(`[webhook-n8n] Accion recibida: ${action}`, JSON.stringify(data || {}).slice(0, 200));
@@ -188,20 +201,15 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'analyze-complete': {
         const result = await handleAnalyzeComplete(db, actionData);
-        return NextResponse.json(result, {
-          status: result.success ? 200 : 400,
-        });
+        return NextResponse.json(result, { status: result.success ? 200 : 400 });
       }
 
       case 'lead-update': {
         const result = await handleLeadUpdate(db, actionData);
-        return NextResponse.json(result, {
-          status: result.success ? 200 : 400,
-        });
+        return NextResponse.json(result, { status: result.success ? 200 : 400 });
       }
 
       default: {
-        // Log unknown actions and return 200 to avoid n8n retries
         console.log(`[webhook-n8n] Accion desconocida: ${action}`, JSON.stringify(actionData).slice(0, 500));
         return NextResponse.json({
           success: true,
@@ -212,9 +220,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('[webhook-n8n] Error critico:', error);
-    return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
   }
 }
