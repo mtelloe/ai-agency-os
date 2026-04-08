@@ -95,6 +95,12 @@ interface GenerateResult {
   scriptId: string;
 }
 
+interface SkippedResult {
+  empresaId: string;
+  nombre: string;
+  reason: string;
+}
+
 interface SendResult {
   empresaId: string;
   nombre: string;
@@ -129,6 +135,7 @@ export default function AutopilotPage() {
   const [audits, setAudits] = useState<AuditResult[]>([]);
   const [generated, setGenerated] = useState<GenerateResult[]>([]);
   const [sent, setSent] = useState<SendResult[]>([]);
+  const [skipped, setSkipped] = useState<SkippedResult[]>([]);
 
   // Credit estimate
   const creditEstimate = 2 + 3 * Number(cantidad);
@@ -178,6 +185,7 @@ export default function AutopilotPage() {
     setAudits([]);
     setGenerated([]);
     setSent([]);
+    setSkipped([]);
     setSteps({
       prospect: { status: 'pending', message: 'Buscando empresas...' },
       audit: { status: 'pending', message: 'Auditando webs...' },
@@ -295,13 +303,18 @@ export default function AutopilotPage() {
             userId: user.id,
           });
 
-          generateResults.push({
-            empresaId: audit.empresaId,
-            nombre: audit.nombre,
-            propuestaId: genData.propuestaId,
-            scriptId: genData.scriptId,
-          });
-          setGenerated([...generateResults]);
+          if (genData.skipped) {
+            const skippedResults = [...skipped, { empresaId: audit.empresaId, nombre: audit.nombre, reason: genData.reason }];
+            setSkipped(skippedResults);
+          } else {
+            generateResults.push({
+              empresaId: audit.empresaId,
+              nombre: audit.nombre,
+              propuestaId: genData.propuestaId,
+              scriptId: genData.scriptId,
+            });
+            setGenerated([...generateResults]);
+          }
         } catch (err) {
           console.error(`Error generando para ${audit.nombre}:`, err);
         }
@@ -410,6 +423,7 @@ export default function AutopilotPage() {
     setAudits([]);
     setGenerated([]);
     setSent([]);
+    setSkipped([]);
     setSteps({
       prospect: { status: 'pending', message: 'Buscando empresas...' },
       audit: { status: 'pending', message: 'Auditando webs...' },
@@ -731,12 +745,30 @@ export default function AutopilotPage() {
                   <Badge variant="secondary" className="text-sm px-3 py-1">
                     {generated.length} propuestas generadas
                   </Badge>
+                  {skipped.length > 0 && (
+                    <Badge variant="destructive" className="text-sm px-3 py-1">
+                      {skipped.length} sin contacto — saltadas
+                    </Badge>
+                  )}
                   {sendEmails && (
                     <Badge variant="secondary" className="text-sm px-3 py-1">
                       {sent.length} emails enviados
                     </Badge>
                   )}
                 </div>
+                {skipped.length > 0 && (
+                  <div className="mt-4 text-left bg-amber-50 dark:bg-amber-950/20 rounded-lg p-4 space-y-1">
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-400 mb-2">
+                      Empresas saltadas por falta de datos de contacto:
+                    </p>
+                    {skipped.map((s) => (
+                      <div key={s.empresaId} className="text-xs text-amber-600 dark:text-amber-500 flex items-start gap-1">
+                        <AlertCircle className="h-3 w-3 mt-0.5 shrink-0" />
+                        <span><span className="font-medium">{s.nombre}</span> — {s.reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

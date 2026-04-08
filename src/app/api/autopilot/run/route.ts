@@ -63,15 +63,31 @@ function quickExtractContact(text: string): string {
   return [...new Set([...emails, ...phones.map(t => t.trim())])].join(', ');
 }
 
+// Slugs donde suelen aparecer datos del responsable/CEO
+const TEAM_SLUGS = [
+  '/sobre-nosotros', '/sobre-mi', '/quienes-somos', '/equipo',
+  '/about', '/team', '/nosotros', '/who-we-are',
+];
+
 async function quickScrape(url: string) {
   try {
     const baseUrl = new URL(url);
 
-    // Fetch main page + legal/contact pages in parallel (3 pages max for speed)
-    const [mainHtml, legalHtml, contactHtml] = await Promise.all([
+    // Intentar páginas de equipo/sobre nosotros — la primera que responda
+    const teamHtmlPromise = (async () => {
+      for (const slug of TEAM_SLUGS) {
+        const html = await quickFetch(`${baseUrl.origin}${slug}`, 5000);
+        if (html && html.length > 500) return { html, slug };
+      }
+      return null;
+    })();
+
+    // Fetch main + legal + contact + equipo en paralelo
+    const [mainHtml, legalHtml, contactHtml, teamResult] = await Promise.all([
       quickFetch(url),
       quickFetch(`${baseUrl.origin}/aviso-legal`),
       quickFetch(`${baseUrl.origin}/contacto`),
+      teamHtmlPromise,
     ]);
 
     if (!mainHtml) return { url, title: '', description: '', headings: [], bodyText: '', contactInfo: '', socialLinks: [] };
@@ -83,6 +99,7 @@ async function quickScrape(url: string) {
     let bodyText = stripHtml(mainHtml).slice(0, 2500);
     if (legalHtml && legalHtml.length > 200) bodyText += `\n--- Página: ${baseUrl.origin}/aviso-legal ---\n${stripHtml(legalHtml).slice(0, 3000)}`;
     if (contactHtml && contactHtml.length > 200) bodyText += `\n--- Página: ${baseUrl.origin}/contacto ---\n${stripHtml(contactHtml).slice(0, 2000)}`;
+    if (teamResult) bodyText += `\n--- Página (equipo/responsable): ${baseUrl.origin}${teamResult.slug} ---\n${stripHtml(teamResult.html).slice(0, 2500)}`;
     bodyText += quickMetadata(mainHtml);
 
     return {
@@ -476,6 +493,35 @@ async function handleGenerate(
       reason: `Score ${score}/100 — este negocio ya tiene casi todo. No merece gastar créditos en propuesta.`,
       score,
     });
+  }
+
+  // Contacto gate: sin datos de contacto no podemos llegar al cliente, no gastamos créditos
+  const tieneContacto = !!(
+    auditoria.contacto_email ||
+    auditoria.contacto_telefono
+  );
+  if (!tieneContacto) {
+    // Verificar también si la empresa tiene email/teléfono en Supabase
+    const { data: empresa } = await db
+      .from('empresas')
+      .select('email, telefono')
+      .eq('id', auditoria.empresa_id || '')
+      .single();
+
+    const tieneContactoEmpresa = !!(empresa?.email || empresa?.telefono);
+    if (!tieneContactoEmpresa) {
+      if (auditoria.empresa_id) {
+        await db.from('leads')
+          .update({ estado_pipeline: 'Descartado', notas: 'Sin datos de contacto — no se puede llegar al cliente.' })
+          .eq('empresa_id', auditoria.empresa_id)
+          .eq('workspace_id', workspaceId);
+      }
+      return NextResponse.json({
+        skipped: true,
+        reason: 'Sin datos de contacto — no se generan propuesta ni scripts.',
+        score,
+      });
+    }
   }
 
   // Check enough credits for proposal + scripts (2 credits)
