@@ -6,7 +6,7 @@ const anthropic = new Anthropic({
 
 export async function callClaude(systemPrompt: string, userMessage: string): Promise<string> {
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 4096,
     system: systemPrompt,
     messages: [{ role: 'user', content: userMessage }],
@@ -36,7 +36,7 @@ export async function callClaudeVision(
   content.push({ type: 'text', text: userMessage });
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-haiku-4-5-20251001',
     max_tokens: 2048,
     system: systemPrompt,
     messages: [{ role: 'user', content }],
