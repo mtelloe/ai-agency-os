@@ -80,6 +80,8 @@ export interface Auditoria {
   empresa?: Empresa;
 }
 
+export type EnrichmentStatus = 'pending' | 'full' | 'partial' | 'no_contact';
+
 export interface Lead {
   id: string;
   workspace_id: string;
@@ -97,6 +99,14 @@ export interface Lead {
   ultima_actividad_at: string;
   created_at: string;
   updated_at: string;
+  // Enrichment fields (Apollo)
+  decisor_nombre: string | null;
+  decisor_cargo: string | null;
+  decisor_email: string | null;
+  decisor_movil: string | null;
+  decisor_linkedin: string | null;
+  enrichment_status: EnrichmentStatus;
+  enrichment_source: string | null;
   empresa?: Empresa;
 }
 
