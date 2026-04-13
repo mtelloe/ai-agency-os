@@ -5,7 +5,7 @@ export const COST_MAP: Record<string, number> = {
   auditoria: 0.02,
   propuesta: 0.02,
   scripts: 0.02,
-  prospeccion: 0.03,
+  prospeccion: 0.05,
   web_demo: 0.03,
   agente: 0.01,
   demo_enviada: 0.001,
