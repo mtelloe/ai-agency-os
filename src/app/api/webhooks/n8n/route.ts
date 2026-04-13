@@ -169,6 +169,182 @@ async function handleLeadUpdate(
 }
 
 /**
+ * Handle "check-duplicate" action: check if a prospect already exists in the workspace
+ */
+async function handleCheckDuplicate(
+  db: ReturnType<typeof getServerClient>,
+  data: Record<string, unknown>,
+): Promise<{ success: boolean; duplicate: boolean; message: string }> {
+  const { workspaceId, domain, phone, name } = data;
+
+  if (!workspaceId || typeof workspaceId !== 'string') {
+    return { success: false, duplicate: false, message: 'Falta workspaceId' };
+  }
+
+  const { data: empresas } = await db
+    .from('empresas')
+    .select('id, nombre, website, telefono')
+    .eq('workspace_id', workspaceId);
+
+  if (!empresas || empresas.length === 0) {
+    return { success: true, duplicate: false, message: 'No hay empresas en el workspace' };
+  }
+
+  const normalizedName = typeof name === 'string'
+    ? name.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ')
+    : '';
+
+  const normalizedDomain = typeof domain === 'string'
+    ? domain.toLowerCase().replace('www.', '').replace(/\/+$/, '')
+    : '';
+
+  const normalizedPhone = typeof phone === 'string'
+    ? phone.replace(/\s/g, '')
+    : '';
+
+  for (const emp of empresas) {
+    if (normalizedDomain && emp.website) {
+      try {
+        const empDomain = new URL(emp.website).hostname.replace('www.', '').toLowerCase();
+        if (empDomain === normalizedDomain) {
+          return { success: true, duplicate: true, message: `Duplicado por dominio: ${emp.nombre}` };
+        }
+      } catch { /* skip */ }
+    }
+
+    if (normalizedPhone && emp.telefono) {
+      if (emp.telefono.replace(/\s/g, '') === normalizedPhone) {
+        return { success: true, duplicate: true, message: `Duplicado por telefono: ${emp.nombre}` };
+      }
+    }
+
+    if (normalizedName && emp.nombre) {
+      const empName = emp.nombre.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ');
+      if (empName === normalizedName) {
+        return { success: true, duplicate: true, message: `Duplicado por nombre: ${emp.nombre}` };
+      }
+    }
+  }
+
+  return { success: true, duplicate: false, message: 'No es duplicado' };
+}
+
+/**
+ * Handle "prospect-complete" action: create empresa + lead from n8n prospecting pipeline
+ */
+async function handleProspectComplete(
+  db: ReturnType<typeof getServerClient>,
+  data: Record<string, unknown>,
+): Promise<{ success: boolean; message: string }> {
+  const { workspace_id, empresa, lead } = data;
+
+  if (!workspace_id || typeof workspace_id !== 'string') {
+    return { success: false, message: 'Falta workspace_id' };
+  }
+  if (!empresa || typeof empresa !== 'object') {
+    return { success: false, message: 'Falta datos de empresa' };
+  }
+
+  const emp = empresa as Record<string, unknown>;
+  const leadData = (lead || {}) as Record<string, unknown>;
+
+  const { data: newEmpresa, error: empresaError } = await db
+    .from('empresas')
+    .insert({
+      workspace_id,
+      nombre: emp.name || emp.nombre || 'Sin nombre',
+      website: emp.website || null,
+      telefono: emp.phone || emp.telefono || null,
+      ciudad: emp.city || emp.ciudad || null,
+      nicho: emp.nicho || null,
+      origen: 'prospecting',
+    })
+    .select('id')
+    .single();
+
+  if (empresaError) {
+    console.error('[webhook-n8n] Error creando empresa:', empresaError);
+    return { success: false, message: `Error al crear empresa: ${empresaError.message}` };
+  }
+
+  let score = 70;
+  if (!emp.website) score += 15;
+  const reviews = Number(emp.reviews) || 0;
+  if (reviews < 20) score += 5;
+  const rating = Number(emp.rating) || 5;
+  if (rating < 4.5) score += 5;
+  score = Math.min(95, Math.max(60, score));
+
+  const valor = emp.website ? 1000 : 2000;
+  const enrichmentStatus = leadData.enrichment_status || 'no_contact';
+  const contactName = (leadData.decisor_nombre as string) || `Responsable de ${emp.name || emp.nombre}`;
+
+  const { error: leadError } = await db
+    .from('leads')
+    .insert({
+      workspace_id,
+      empresa_id: newEmpresa.id,
+      nombre_contacto: contactName,
+      cargo: (leadData.decisor_cargo as string) || null,
+      email: (leadData.decisor_email as string) || null,
+      telefono: (leadData.decisor_movil as string) || (emp.phone as string) || null,
+      estado_pipeline: 'Nuevo',
+      score,
+      valor_estimado: valor,
+      fuente: 'Google Maps + Apollo',
+      decisor_nombre: (leadData.decisor_nombre as string) || null,
+      decisor_cargo: (leadData.decisor_cargo as string) || null,
+      decisor_email: (leadData.decisor_email as string) || null,
+      decisor_movil: (leadData.decisor_movil as string) || null,
+      decisor_linkedin: (leadData.decisor_linkedin as string) || null,
+      enrichment_status: enrichmentStatus,
+      enrichment_source: (leadData.source as string) || 'apify+apollo',
+    });
+
+  if (leadError) {
+    console.error('[webhook-n8n] Error creando lead:', leadError);
+    return { success: false, message: `Error al crear lead: ${leadError.message}` };
+  }
+
+  await db.from('actividad').insert({
+    workspace_id,
+    user_id: null,
+    tipo_evento: 'prospeccion_completada',
+    descripcion: `Lead enriquecido: ${contactName} (${enrichmentStatus}) via n8n pipeline`,
+    entidad_tipo: 'empresa',
+    entidad_id: newEmpresa.id,
+    metadata: { enrichment_status: enrichmentStatus, source: 'n8n_pipeline' },
+  });
+
+  return { success: true, message: `Empresa + lead creados (enrichment: ${enrichmentStatus})` };
+}
+
+/**
+ * Handle "prospect-error" action: log a prospecting pipeline error to actividad
+ */
+async function handleProspectError(
+  db: ReturnType<typeof getServerClient>,
+  data: Record<string, unknown>,
+): Promise<{ success: boolean; message: string }> {
+  const { workspace_id, error_message } = data;
+
+  if (workspace_id && typeof workspace_id === 'string') {
+    await db.from('actividad').insert({
+      workspace_id,
+      user_id: null,
+      tipo_evento: 'prospeccion_error',
+      descripcion: `Error en pipeline de prospeccion: ${String(error_message || 'Error desconocido')}`,
+      entidad_tipo: 'workspace',
+      entidad_id: workspace_id,
+      metadata: { error: String(error_message || 'unknown'), source: 'n8n_pipeline' },
+    });
+  }
+
+  console.error(`[webhook-n8n] Prospect error for workspace ${workspace_id}:`, error_message);
+  return { success: true, message: 'Error registrado' };
+}
+
+/**
  * POST /api/webhooks/n8n
  */
 export async function POST(request: NextRequest) {
@@ -207,6 +383,21 @@ export async function POST(request: NextRequest) {
       case 'lead-update': {
         const result = await handleLeadUpdate(db, actionData);
         return NextResponse.json(result, { status: result.success ? 200 : 400 });
+      }
+
+      case 'check-duplicate': {
+        const result = await handleCheckDuplicate(db, actionData);
+        return NextResponse.json(result, { status: result.success ? 200 : 400 });
+      }
+
+      case 'prospect-complete': {
+        const result = await handleProspectComplete(db, actionData);
+        return NextResponse.json(result, { status: result.success ? 200 : 400 });
+      }
+
+      case 'prospect-error': {
+        const result = await handleProspectError(db, actionData);
+        return NextResponse.json(result, { status: 200 });
       }
 
       default: {
