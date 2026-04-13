@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiClient, getTokenFromRequest } from '@/lib/supabase/api-client';
-import { searchGoogleMaps } from '@/lib/google-maps';
 import { spendCredit, logActivity } from '@/lib/credits';
+import { triggerN8nWebhook, isN8nConfigured } from '@/lib/n8n/client';
+import { searchGoogleMaps } from '@/lib/google-maps';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,10 +19,39 @@ export async function POST(request: NextRequest) {
     }
 
     if (typeof nicho !== 'string' || nicho.length > 200 || typeof ciudad !== 'string' || ciudad.length > 200) {
-      return NextResponse.json({ error: 'Datos de entrada inválidos' }, { status: 400 });
+      return NextResponse.json({ error: 'Datos de entrada invalidos' }, { status: 400 });
     }
 
-    // ─── Get existing businesses to avoid duplicates ───
+    // Spend 2 credits
+    const spent1 = await spendCredit(workspaceId, userId, 'prospeccion', `Prospeccion: ${nicho} en ${ciudad}`, token);
+    if (!spent1) return NextResponse.json({ error: 'No tienes creditos suficientes' }, { status: 402 });
+    const spent2 = await spendCredit(workspaceId, userId, 'prospeccion', `Prospeccion (2/2): ${nicho} en ${ciudad}`, token);
+    if (!spent2) return NextResponse.json({ error: 'No tienes creditos suficientes' }, { status: 402 });
+
+    // If n8n is configured, use the async pipeline (Apify + Apollo enrichment)
+    if (isN8nConfigured()) {
+      await triggerN8nWebhook('prospect-enrich', {
+        workspace_id: workspaceId,
+        nicho,
+        ciudad,
+        cantidad,
+        callback_url: `${process.env.BASE_URL || process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/n8n`,
+      });
+
+      await logActivity(
+        workspaceId, userId, 'prospeccion_iniciada',
+        `Prospeccion con enriquecimiento: ${nicho} en ${ciudad} (${cantidad} leads)`,
+        token,
+      );
+
+      return NextResponse.json({
+        message: 'Prospeccion iniciada. Los leads apareceran en el pipeline cuando esten listos.',
+        status: 'processing',
+        async: true,
+      });
+    }
+
+    // Fallback: direct Apify call without Apollo enrichment (if n8n not configured)
     const { data: existingEmpresas } = await db
       .from('empresas')
       .select('nombre, website, telefono')
@@ -38,25 +68,16 @@ export async function POST(request: NextRequest) {
       (existingEmpresas || []).filter(e => e.telefono).map(e => e.telefono!.replace(/\s/g, ''))
     );
 
-    // Spend 2 credits
-    const spent1 = await spendCredit(workspaceId, userId, 'prospeccion', `Prospección: ${nicho} en ${ciudad}`, token);
-    if (!spent1) return NextResponse.json({ error: 'No tienes créditos suficientes' }, { status: 402 });
-    const spent2 = await spendCredit(workspaceId, userId, 'prospeccion', `Prospección (2/2): ${nicho} en ${ciudad}`, token);
-    if (!spent2) return NextResponse.json({ error: 'No tienes créditos suficientes' }, { status: 402 });
-
-    // Search Google Maps — exclude businesses already in the system
     const query = `${nicho} ${ciudad}`;
     const mapResults = await searchGoogleMaps(query, cantidad, existingNames);
 
     if (mapResults.length === 0) {
-      return NextResponse.json({ error: 'No se encontraron negocios NUEVOS en Google Maps. Puede que ya tengas todos los del área — prueba otro nicho o ciudad.' }, { status: 404 });
+      return NextResponse.json({ error: 'No se encontraron negocios NUEVOS en Google Maps.' }, { status: 404 });
     }
 
-    // Create empresas + leads from REAL data
     const createdLeads = [];
 
     for (const biz of mapResults) {
-      // Double-check deduplication by website and phone
       if (biz.website) {
         try {
           const domain = new URL(biz.website).hostname.replace('www.', '').toLowerCase();
@@ -65,7 +86,6 @@ export async function POST(request: NextRequest) {
       }
       if (biz.phone && existingPhones.has(biz.phone.replace(/\s/g, ''))) continue;
 
-      // Calculate opportunity score based on real data
       let score = 70;
       if (!biz.website) score += 15;
       if ((biz.reviewsCount || 0) < 20) score += 5;
@@ -101,15 +121,15 @@ export async function POST(request: NextRequest) {
           score,
           valor_estimado: valor,
           fuente: 'Google Maps',
+          enrichment_status: 'pending',
+          enrichment_source: 'apify',
         })
         .select()
         .single();
 
       if (leadError) { console.error('Error creating lead:', leadError); continue; }
-
       createdLeads.push({ ...lead, empresa });
 
-      // Track for within-batch dedup
       existingNames.push(biz.title);
       if (biz.website) {
         try { existingWebsites.add(new URL(biz.website).hostname.replace('www.', '').toLowerCase()); }
@@ -119,10 +139,10 @@ export async function POST(request: NextRequest) {
     }
 
     await logActivity(workspaceId, userId, 'prospeccion_completada',
-      `Prospección real: ${createdLeads.length} negocios de ${nicho} en ${ciudad} (Google Maps)`,
+      `Prospeccion directa: ${createdLeads.length} negocios de ${nicho} en ${ciudad} (sin enriquecimiento)`,
       token, 'leads', createdLeads[0]?.id);
 
-    return NextResponse.json({ leads: createdLeads, total: createdLeads.length });
+    return NextResponse.json({ leads: createdLeads, total: createdLeads.length, async: false });
   } catch (error) {
     console.error('Prospect error:', error);
     return NextResponse.json({ error: 'Error al prospectar.' }, { status: 500 });

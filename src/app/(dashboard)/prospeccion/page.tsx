@@ -97,12 +97,18 @@ export default function ProspeccionPage() {
       }
 
       const data = await res.json();
-      setResults(data.leads);
-      toast.success(`${data.total} leads encontrados y añadidos al pipeline`);
 
-      // Refresh history and workspace credits
-      queryClient.invalidateQueries({ queryKey: ['prospeccion-history'] });
-      queryClient.invalidateQueries({ queryKey: ['workspace'] });
+      if (data.async) {
+        // n8n pipeline triggered — leads will appear asynchronously
+        toast.success('Prospeccion iniciada. Los leads apareceran en el pipeline en 1-2 minutos con datos del decisor.');
+        queryClient.invalidateQueries({ queryKey: ['workspace'] });
+      } else {
+        // Direct Apify fallback — leads returned immediately
+        setResults(data.leads);
+        toast.success(`${data.total} leads encontrados y anadidos al pipeline`);
+        queryClient.invalidateQueries({ queryKey: ['prospeccion-history'] });
+        queryClient.invalidateQueries({ queryKey: ['workspace'] });
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Error al prospectar');
     } finally {
@@ -139,7 +145,7 @@ export default function ProspeccionPage() {
             Nueva prospeccion
           </CardTitle>
           <CardDescription>
-            La IA generara prospectos realistas para el nicho y ciudad que elijas.
+            Busca negocios reales en Google Maps y encuentra al decisor con email y movil.
             Coste: 2 creditos. Tienes {creditos} creditos disponibles.
           </CardDescription>
         </CardHeader>
@@ -222,9 +228,9 @@ export default function ProspeccionPage() {
         <Card>
           <CardContent className="p-8 text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-4" />
-            <p className="font-medium">Buscando negocios...</p>
+            <p className="font-medium">Buscando negocios reales...</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Generando prospectos de {nicho} en {ciudad}. Esto puede tardar 20-40 segundos.
+              Buscando {nicho} en {ciudad} en Google Maps y enriqueciendo con datos del decisor.
             </p>
           </CardContent>
         </Card>

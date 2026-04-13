@@ -18,24 +18,64 @@ import { toast } from 'sonner';
 
 type LeadWithEmpresa = Lead & { empresas?: { nombre: string } };
 
+function EnrichmentBadge({ status }: { status: string | null }) {
+  if (!status || status === 'pending') return null;
+  const colors: Record<string, string> = {
+    full: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+    partial: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+    no_contact: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  };
+  const labels: Record<string, string> = {
+    full: 'Enriquecido',
+    partial: 'Parcial',
+    no_contact: 'Sin contacto',
+  };
+  return (
+    <span className={cn('text-[10px] px-1.5 py-0.5 rounded-full font-medium', colors[status] || 'bg-muted')}>
+      {labels[status] || status}
+    </span>
+  );
+}
+
 function LeadCard({ lead }: { lead: LeadWithEmpresa }) {
   const scoreColor = (lead.score || 0) >= 80 ? 'text-green-500' : (lead.score || 0) >= 60 ? 'text-yellow-500' : 'text-red-500';
+  const decisorName = lead.decisor_nombre || lead.nombre_contacto;
+  const decisorCargo = lead.decisor_cargo || lead.cargo;
 
   return (
     <Card className="hover:border-primary/30 transition-colors">
       <CardContent className="p-3 space-y-2">
         <div className="flex items-start justify-between">
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium truncate">{lead.nombre_contacto}</p>
+            <p className="text-sm font-medium truncate">{decisorName}</p>
+            {decisorCargo && (
+              <p className="text-[11px] text-muted-foreground truncate">{decisorCargo}</p>
+            )}
             <p className="text-xs text-muted-foreground truncate">{lead.empresas?.nombre || '—'}</p>
           </div>
-          {lead.score != null && (
-            <span className={cn('text-sm font-bold', scoreColor)}>{lead.score}</span>
-          )}
+          <div className="flex flex-col items-end gap-1 ml-2">
+            {lead.score != null && (
+              <span className={cn('text-sm font-bold', scoreColor)}>{lead.score}</span>
+            )}
+            <EnrichmentBadge status={lead.enrichment_status} />
+          </div>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {lead.email && <Mail className="h-3 w-3" />}
-          {lead.telefono && <Phone className="h-3 w-3" />}
+          {(lead.decisor_email || lead.email) && (
+            <a href={`mailto:${lead.decisor_email || lead.email}`} title={lead.decisor_email || lead.email || ''}>
+              <Mail className="h-3 w-3 hover:text-primary cursor-pointer" />
+            </a>
+          )}
+          {(lead.decisor_movil || lead.telefono) && (
+            <a href={`tel:${lead.decisor_movil || lead.telefono}`} title={lead.decisor_movil || lead.telefono || ''}>
+              <Phone className="h-3 w-3 hover:text-primary cursor-pointer" />
+            </a>
+          )}
+          {lead.decisor_linkedin && (
+            <a href={lead.decisor_linkedin} target="_blank" rel="noopener noreferrer" title="LinkedIn">
+              <Users className="h-3 w-3 hover:text-primary cursor-pointer" />
+            </a>
+          )}
           {lead.valor_estimado != null && (
             <span className="ml-auto font-medium text-foreground">{lead.valor_estimado}€</span>
           )}
