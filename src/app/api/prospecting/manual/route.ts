@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createApiClient, getTokenFromRequest } from '@/lib/supabase/api-client';
+import { getTokenFromRequest } from '@/lib/supabase/api-client';
 import { spendCredit, logActivity } from '@/lib/credits';
 import { triggerN8nWebhook, isN8nConfigured } from '@/lib/n8n/client';
 
@@ -8,7 +8,6 @@ export async function POST(request: NextRequest) {
     const token = getTokenFromRequest(request);
     if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
 
-    const db = createApiClient(token);
     const body = await request.json();
     const { nicho, ciudad, workspaceId, userId } = body;
     const cantidad = Math.min(Math.max(1, Number(body.cantidad) || 5), 20);
