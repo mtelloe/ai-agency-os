@@ -1,5 +1,5 @@
 const APIFY_TOKEN = process.env.APIFY_API_TOKEN;
-const ACTOR_ID = 'compass~crawler-google-places';
+const ACTOR_ID = 'nwua9~google-maps-scraper';
 
 export interface GoogleMapsResult {
   title: string;
@@ -11,6 +11,7 @@ export interface GoogleMapsResult {
   reviewsCount: number | null;
   categoryName: string | null;
   placeId: string | null;
+  googleMapsUrl: string | null;
 }
 
 /**
@@ -40,8 +41,9 @@ export async function searchGoogleMaps(
           maxCrawledPlacesPerSearch: Math.min(requestCount, 30),
           language: 'es',
           countryCode: 'es',
+          skipClosedPlaces: true,
         }),
-        signal: AbortSignal.timeout(90000),
+        signal: AbortSignal.timeout(120000),
       }
     );
 
@@ -79,6 +81,7 @@ export async function searchGoogleMaps(
         reviewsCount: (item.reviewsCount as number) || null,
         categoryName: (item.categoryName as string) || null,
         placeId: (item.placeId as string) || null,
+        googleMapsUrl: (item.url as string) || null,
       });
 
       if (results.length >= maxResults) break;
