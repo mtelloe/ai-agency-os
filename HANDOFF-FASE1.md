@@ -12,9 +12,11 @@
 - Commit: `0fc0a2e` — "feat(db): add agents, schedules and executions tables for orchestrator"
 - **Verificado:** `SELECT table_name FROM information_schema.tables WHERE table_name IN ('agents','agent_schedules','agent_executions')` → 3 filas.
 
-### 🟡 Task 2 — Seed agentes (CÓDIGO ESCRITO, no ejecutado)
-- Script `supabase/seed_agents.ts` listo. Parsea los 8 `.md` de `/Users/mariatelloesbri/ai-agency-analysis/agency-agents/sales/` y hace upsert en `agents`.
-- Pendiente: instalar deps y correr. Ver "Primeros 3 pasos al retomar" abajo.
+### ✅ Task 2 — Seed agentes (COMPLETADA 2026-04-15)
+- 8 agentes insertados vía MCP `execute_sql` (la key `sb_secret_...` en `.env.local` estaba revocada → 401; el script `seed_agents.ts` quedó inútil hasta rotar la key, pero el resultado en BD es el mismo).
+- Verificado: `SELECT slug, name FROM agents WHERE workspace_id='9131555f-e22b-49e3-ab52-66f6f11a91f0'` → 8 filas activas, prompts 10-20KB c/u.
+- Generador alternativo: `supabase/generate_seed_sql.ts` (emite SQL por agente a `/tmp/seed_agent_N.sql`). Útil si hay que re-seedear.
+- **Pendiente operativo**: rotar `SUPABASE_SERVICE_ROLE_KEY` en `.env.local` antes de Fase 2 (el heartbeat de Task 14 y el orchestrator necesitarán key válida).
 
 ### ⏳ Tasks 3–17 — pendientes
 Todas sin empezar. El plan tiene código completo para cada una.
@@ -47,26 +49,7 @@ cd /Users/mariatelloesbri/ai-agency-os-sales-fase1
 git status   # debe estar en feat/sales-orchestrator-fase1
 ```
 
-### Paso 2 — Ejecutar Task 2 (seed)
-```bash
-cd /Users/mariatelloesbri/ai-agency-os-sales-fase1
-npm install --save-dev gray-matter tsx
-
-export SUPABASE_URL=https://ttpduldgqbdbkdpnfuvj.supabase.co
-export SUPABASE_SERVICE_ROLE_KEY='<service-role-key>'   # pedírsela a Maria o usar MCP
-export SEED_WORKSPACE_ID=9131555f-e22b-49e3-ab52-66f6f11a91f0
-
-npx tsx supabase/seed_agents.ts
-# Expected: 8 líneas "OK   sales-*"
-```
-
-Verificar vía MCP:
-```sql
-SELECT slug, name FROM agents WHERE workspace_id = '9131555f-e22b-49e3-ab52-66f6f11a91f0';
-```
-Expected: 8 filas. Commit: `git add supabase/seed_agents.ts package.json package-lock.json && git commit -m "feat(seed): load 8 sales agents from markdown"`.
-
-### Paso 3 — Arrancar Task 3 (scaffold repo)
+### Paso 2 — Arrancar Task 3 (scaffold repo)
 Ir a plan `docs/superpowers/plans/2026-04-14-sales-orchestrator-fase-1.md` Task 3. Dispatch subagent con prompt del template `subagent-driven-development/implementer-prompt.md`. Directorio: `/Users/mariatelloesbri/sales-orchestrator/`.
 
 ## Cómo retomar con subagentes (sesión fresca)
