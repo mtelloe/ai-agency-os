@@ -5,7 +5,7 @@ import { Cpu, Sparkles, Radar, FileText } from 'lucide-react';
 const ACTIONS = [
   { href: '/analizador', label: 'Analizar web', description: 'Audita un negocio en segundos', icon: Cpu, color: 'text-blue-500' },
   { href: '/agentes/nuevo', label: 'Crear agente', description: 'Despliega un chatbot IA', icon: Sparkles, color: 'text-purple-500' },
-  { href: '/prospeccion', label: 'Prospectar', description: 'Encuentra negocios por nicho', icon: Radar, color: 'text-green-500' },
+  { href: '/autopilot', label: 'Prospectar', description: 'Encuentra negocios por nicho', icon: Radar, color: 'text-green-500' },
   { href: '/propuestas', label: 'Propuestas', description: 'Genera propuestas comerciales', icon: FileText, color: 'text-orange-500' },
 ];
 

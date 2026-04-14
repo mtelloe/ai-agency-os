@@ -20,7 +20,7 @@ export const NAV_ITEMS = [
   { href: '/pipeline', label: 'Pipeline CRM', icon: Users },
   { href: '/propuestas', label: 'Propuestas', icon: FileText },
   { href: '/scripts', label: 'Scripts', icon: PenTool },
-  { href: '/prospeccion', label: 'Prospección', icon: Radar },
+  { href: '/autopilot', label: 'Prospección', icon: Radar },
   { href: '/automatizaciones', label: 'Automatizaciones', icon: Zap },
   { href: '/nichos', label: 'Nichos', icon: BookOpen },
   { href: '/plantillas', label: 'Plantillas', icon: LayoutTemplate },
