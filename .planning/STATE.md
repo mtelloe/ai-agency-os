@@ -8,7 +8,7 @@ progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 10
-  completed_plans: 3
+  completed_plans: 4
 ---
 
 # Project State
@@ -32,9 +32,9 @@ progress:
 ## Current Position
 
 - Current Phase: 02-outreach-integrations
-- Current Plan: 02 of 10
-- Last completed: 02-01 (Outreach tables migration)
-- Last session: 2026-04-16
+- Current Plan: 05 of 10
+- Last completed: 02-05 (HunterClient)
+- Last session: 2026-04-15
 
 ## Decisions
 
@@ -45,6 +45,9 @@ progress:
 | 02-01 | RLS SELECT-only; service_role bypasses for writes |
 
 - [Phase 02-outreach-integrations]: @types/bottleneck omitted: package does not exist on npm; bottleneck ships its own bundled .d.ts
+- [02-05]: minTime: 100ms (plan spec) over RESEARCH.md's 80ms — more conservative under Hunter's 15req/s limit
+- [02-05]: max_duration=20 set on findEmail per RESEARCH.md pitfall #6 to avoid long polling
+- [02-05]: findEmail null return is correct behavior (not an error) — Hunter does not count failed finds against quota
 
 ## Phase 1 Artifacts (reference)
 
@@ -58,3 +61,6 @@ progress:
 ## Phase 2 Artifacts
 
 - Migration: `supabase/migrations/20260415_add_outreach_tables.sql` (02-01)
+- Hunter types: `sales-orchestrator/src/integrations/hunter/hunter.types.ts` (02-05)
+- HunterClient: `sales-orchestrator/src/integrations/hunter/HunterClient.ts` (02-05)
+- Hunter tests: `sales-orchestrator/tests/integrations/hunter/HunterClient.test.ts` (02-05)
