@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-04-16T11:00:13.556Z"
+last_updated: "2026-04-16T11:00:19.765Z"
 progress:
   total_phases: 3
   completed_phases: 0
@@ -50,6 +50,7 @@ progress:
 - [02-05]: minTime: 100ms (plan spec) over RESEARCH.md's 80ms — more conservative under Hunter's 15req/s limit
 - [02-05]: max_duration=20 set on findEmail per RESEARCH.md pitfall #6 to avoid long polling
 - [02-05]: findEmail null return is correct behavior (not an error) — Hunter does not count failed finds against quota
+- [Phase 02-outreach-integrations]: No Bottleneck inside GmailClient — rate limiting deferred to ProspectorAgent (plan 07)
 
 ## Phase 1 Artifacts (reference)
 

@@ -45,15 +45,15 @@ Departamento de ventas autónomo para Simedalavida. El orchestrator crea y ejecu
 
 **Out of scope:** LinkedIn MCP (decisión legal)
 
-**Plans:** 2/10 plans executed
+**Plans:** 6/10 plans executed
 
 Plans:
 - [x] 02-01-PLAN.md — Supabase migration: outreach_contacts, email_templates, outreach_log tables + RLS
 - [x] 02-02-PLAN.md — Extend src/config/env.ts with Apollo/Hunter/Gmail env vars (Zod schema + AppConfig)
 - [x] 02-03-PLAN.md — Install npm deps: googleapis, google-auth-library, bottleneck, nodemailer
-- [ ] 02-04-PLAN.md — ApolloClient + shared withRetry helper (REQ-2.1, REQ-2.5)
-- [ ] 02-05-PLAN.md — HunterClient: findEmail + verifyEmail (REQ-2.2)
-- [ ] 02-06-PLAN.md — GmailClient: OAuth2 + base64url MIME send (REQ-2.3)
+- [x] 02-04-PLAN.md — ApolloClient + shared withRetry helper (REQ-2.1, REQ-2.5)
+- [x] 02-05-PLAN.md — HunterClient: findEmail + verifyEmail (REQ-2.2)
+- [x] 02-06-PLAN.md — GmailClient: OAuth2 + base64url MIME send (REQ-2.3)
 - [ ] 02-07-PLAN.md — db/outreach.ts + ProspectorAgent (orchestration, dedup, template interpolation)
 - [ ] 02-08-PLAN.md — Wire ProspectorAgent into index.ts and expose POST /api/prospect
 - [ ] 02-09-PLAN.md — Sentinel coverage test + full vitest suite green
