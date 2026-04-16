@@ -49,7 +49,7 @@ Departamento de ventas autónomo para Simedalavida. El orchestrator crea y ejecu
 
 Plans:
 - [x] 02-01-PLAN.md — Supabase migration: outreach_contacts, email_templates, outreach_log tables + RLS
-- [ ] 02-02-PLAN.md — Extend src/config/env.ts with Apollo/Hunter/Gmail env vars (Zod schema + AppConfig)
+- [x] 02-02-PLAN.md — Extend src/config/env.ts with Apollo/Hunter/Gmail env vars (Zod schema + AppConfig)
 - [x] 02-03-PLAN.md — Install npm deps: googleapis, google-auth-library, bottleneck, nodemailer
 - [ ] 02-04-PLAN.md — ApolloClient + shared withRetry helper (REQ-2.1, REQ-2.5)
 - [ ] 02-05-PLAN.md — HunterClient: findEmail + verifyEmail (REQ-2.2)
