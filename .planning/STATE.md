@@ -8,7 +8,7 @@ progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 10
-  completed_plans: 7
+  completed_plans: 8
 ---
 
 # Project State
@@ -32,8 +32,8 @@ progress:
 ## Current Position
 
 - Current Phase: 02-outreach-integrations
-- Current Plan: 07 of 10
-- Last completed: 02-07 (ProspectorAgent + db/outreach)
+- Current Plan: 08 of 10
+- Last completed: 02-08 (ProspectorAgent wired into index.ts + POST /api/prospect endpoint)
 - Last session: 2026-04-15
 
 ## Decisions
@@ -77,3 +77,6 @@ progress:
 - ProspectorAgent: `sales-orchestrator/src/agents/ProspectorAgent.ts` (02-07)
 - Outreach tests: `sales-orchestrator/tests/db/outreach.test.ts` (02-07)
 - ProspectorAgent tests: `sales-orchestrator/tests/agents/ProspectorAgent.test.ts` (02-07)
+- server.ts (options-object, /api/prospect): `sales-orchestrator/src/api/server.ts` (02-08)
+- index.ts (ProspectorAgent wired): `sales-orchestrator/src/index.ts` (02-08)
+- server route tests: `sales-orchestrator/tests/api/server.test.ts` (02-08)
