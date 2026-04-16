@@ -8,7 +8,7 @@ progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 10
-  completed_plans: 6
+  completed_plans: 7
 ---
 
 # Project State
@@ -32,8 +32,8 @@ progress:
 ## Current Position
 
 - Current Phase: 02-outreach-integrations
-- Current Plan: 05 of 10
-- Last completed: 02-05 (HunterClient)
+- Current Plan: 07 of 10
+- Last completed: 02-07 (ProspectorAgent + db/outreach)
 - Last session: 2026-04-15
 
 ## Decisions
@@ -51,6 +51,9 @@ progress:
 - [02-05]: max_duration=20 set on findEmail per RESEARCH.md pitfall #6 to avoid long polling
 - [02-05]: findEmail null return is correct behavior (not an error) — Hunter does not count failed finds against quota
 - [Phase 02-outreach-integrations]: No Bottleneck inside GmailClient — rate limiting deferred to ProspectorAgent (plan 07)
+- [02-07]: Apollo 'verified' maps to outreach 'valid' in resolveEmail — explicit enum bridge
+- [02-07]: interpolateTemplate silent empty-string fallback for missing vars (v1 decision, revisit later)
+- [02-07]: ProspectorAgent gmailLimiter minTime:1000 maxConcurrent:1 — conservative Gmail rate limit
 
 ## Phase 1 Artifacts (reference)
 
@@ -70,3 +73,7 @@ progress:
 - Hunter types: `sales-orchestrator/src/integrations/hunter/hunter.types.ts` (02-05)
 - HunterClient: `sales-orchestrator/src/integrations/hunter/HunterClient.ts` (02-05)
 - Hunter tests: `sales-orchestrator/tests/integrations/hunter/HunterClient.test.ts` (02-05)
+- db/outreach: `sales-orchestrator/src/db/outreach.ts` (02-07)
+- ProspectorAgent: `sales-orchestrator/src/agents/ProspectorAgent.ts` (02-07)
+- Outreach tests: `sales-orchestrator/tests/db/outreach.test.ts` (02-07)
+- ProspectorAgent tests: `sales-orchestrator/tests/agents/ProspectorAgent.test.ts` (02-07)
