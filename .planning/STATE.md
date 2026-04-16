@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-04-16T10:56:29.044Z"
+last_updated: "2026-04-16T11:00:13.556Z"
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 10
-  completed_plans: 4
+  completed_plans: 6
 ---
 
 # Project State
@@ -45,6 +45,8 @@ progress:
 | 02-01 | RLS SELECT-only; service_role bypasses for writes |
 
 - [Phase 02-outreach-integrations]: @types/bottleneck omitted: package does not exist on npm; bottleneck ships its own bundled .d.ts
+- [02-04]: ApolloEmailStatus defined as strict union for type safety in ProspectorAgent
+- [02-04]: withRetry uses err.message.includes('429') — covers both string and Error shapes
 - [02-05]: minTime: 100ms (plan spec) over RESEARCH.md's 80ms — more conservative under Hunter's 15req/s limit
 - [02-05]: max_duration=20 set on findEmail per RESEARCH.md pitfall #6 to avoid long polling
 - [02-05]: findEmail null return is correct behavior (not an error) — Hunter does not count failed finds against quota
@@ -61,6 +63,9 @@ progress:
 ## Phase 2 Artifacts
 
 - Migration: `supabase/migrations/20260415_add_outreach_tables.sql` (02-01)
+- withRetry: `sales-orchestrator/src/integrations/retry.ts` (02-04)
+- Apollo types: `sales-orchestrator/src/integrations/apollo/apollo.types.ts` (02-04)
+- ApolloClient: `sales-orchestrator/src/integrations/apollo/ApolloClient.ts` (02-04)
 - Hunter types: `sales-orchestrator/src/integrations/hunter/hunter.types.ts` (02-05)
 - HunterClient: `sales-orchestrator/src/integrations/hunter/HunterClient.ts` (02-05)
 - Hunter tests: `sales-orchestrator/tests/integrations/hunter/HunterClient.test.ts` (02-05)
