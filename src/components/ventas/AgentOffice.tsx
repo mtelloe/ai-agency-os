@@ -1,197 +1,329 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type { SalesAgentRow, AgentExecutionRow } from '@/lib/types/database';
 
-interface AgentState {
-  id: string;
-  name: string;
-  status: 'active' | 'paused' | 'archived';
-  bubble: string;
-  x: number;
-  y: number;
-  vx: number;
-  vy: number;
-  bobOffset: number;
-  color: string;
-}
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
-const AGENT_COLORS = ['#8ac47a', '#f4a7b9', '#7ab5c4', '#c4a77a'];
-
-const CANVAS_W = 640;
-const CANVAS_H = 360;
-const TILE = 40;
-
-const DESK_SLOTS = [
-  { x: 100, y: 70 },
-  { x: 380, y: 70 },
-  { x: 100, y: 240 },
-  { x: 380, y: 240 },
+const AGENT_CLASSES = [
+  { label: 'Cazador de Leads', emoji: '🗡️', hue: '270' },
+  { label: 'Maestro de Emails', emoji: '📜', hue: '210' },
+  { label: 'Oráculo de Datos', emoji: '🔮', hue: '310' },
+  { label: 'Guardián del CRM', emoji: '🛡️', hue: '160' },
 ];
 
-function drawFloor(ctx: CanvasRenderingContext2D) {
-  const cols = Math.ceil(CANVAS_W / TILE);
-  const rows = Math.ceil(CANVAS_H / TILE);
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      ctx.fillStyle = (r + c) % 2 === 0 ? '#f5f0e8' : '#fff9f0';
-      ctx.fillRect(c * TILE, r * TILE, TILE, TILE);
-    }
+/** Derivar nivel a partir del número de ejecuciones (máx 99) */
+function deriveLevel(execCount: number): number {
+  return Math.min(99, Math.max(1, Math.floor(Math.log2(execCount + 2) * 8)));
+}
+
+/** HP basado en si hubo errores recientes */
+function deriveHp(executions: AgentExecutionRow[], agentId: string): number {
+  const recent = executions.filter((e) => e.agent_id === agentId).slice(0, 5);
+  if (recent.length === 0) return 100;
+  const errors = recent.filter((e) => e.status === 'failed').length;
+  return Math.max(10, 100 - errors * 20);
+}
+
+/** XP pseudo-aleatorio estable por agente (seed basado en id) */
+function deriveXp(agentId: string): number {
+  let hash = 0;
+  for (let i = 0; i < agentId.length; i++) {
+    hash = (hash * 31 + agentId.charCodeAt(i)) >>> 0;
   }
+  return (hash % 85) + 10; // 10–94 %
 }
 
-function drawDesk(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  ctx.fillStyle = '#d4cbbf';
-  ctx.beginPath();
-  ctx.roundRect(x, y, 80, 48, 6);
-  ctx.fill();
+/** Extraer stats de los outputs de las ejecuciones */
+function deriveStats(executions: AgentExecutionRow[], agentId: string) {
+  const mine = executions.filter((e) => e.agent_id === agentId);
+  let leads = 0;
+  let emails = 0;
+  let replies = 0;
 
-  ctx.fillStyle = '#5a5050';
-  ctx.beginPath();
-  ctx.roundRect(x + 25, y + 6, 30, 22, 3);
-  ctx.fill();
-  ctx.fillStyle = '#1a1010';
-  ctx.beginPath();
-  ctx.roundRect(x + 27, y + 8, 26, 18, 2);
-  ctx.fill();
-
-  ctx.fillStyle = '#b0a898';
-  ctx.beginPath();
-  ctx.roundRect(x + 18, y + 34, 44, 9, 2);
-  ctx.fill();
-}
-
-function drawPlant(ctx: CanvasRenderingContext2D, x: number, y: number) {
-  ctx.fillStyle = '#c4845a';
-  ctx.beginPath();
-  ctx.roundRect(x - 8, y + 4, 16, 12, 3);
-  ctx.fill();
-  ctx.fillStyle = '#6aaa5a';
-  for (let i = 0; i < 5; i++) {
-    const angle = (i / 5) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.ellipse(x + Math.cos(angle) * 8, y + Math.sin(angle) * 8, 6, 10, angle, 0, Math.PI * 2);
-    ctx.fill();
-  }
-}
-
-function drawSpeechBubble(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  text: string,
-) {
-  const maxLen = 22;
-  const label = text.length > maxLen ? text.slice(0, maxLen - 1) + '\u2026' : text;
-  ctx.font = '9px monospace';
-  const tw = ctx.measureText(label).width;
-  const bw = tw + 12;
-  const bh = 16;
-  const bx = x - bw / 2;
-  const by = y - bh - 6;
-
-  ctx.fillStyle = 'rgba(255,255,255,0.92)';
-  ctx.beginPath();
-  ctx.roundRect(bx, by, bw, bh, 4);
-  ctx.fill();
-  ctx.strokeStyle = '#d0c8bc';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-
-  ctx.fillStyle = 'rgba(255,255,255,0.92)';
-  ctx.beginPath();
-  ctx.moveTo(x - 3, by + bh);
-  ctx.lineTo(x + 3, by + bh);
-  ctx.lineTo(x, by + bh + 5);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.fillStyle = '#3a3030';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(label, x, by + bh / 2);
-}
-
-function drawAgent(
-  ctx: CanvasRenderingContext2D,
-  agent: AgentState,
-  time: number,
-) {
-  const bob = agent.status === 'active' ? Math.sin(time * 0.003 + agent.bobOffset) * 2 : 0;
-  const cx = agent.x;
-  const cy = agent.y + bob;
-
-  ctx.fillStyle = 'rgba(0,0,0,0.08)';
-  ctx.beginPath();
-  ctx.ellipse(cx, cy + 13, 10, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = agent.color;
-  ctx.beginPath();
-  ctx.arc(cx, cy, 12, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
-  ctx.beginPath();
-  ctx.arc(cx - 4, cy - 2, 2, 0, Math.PI * 2);
-  ctx.arc(cx + 4, cy - 2, 2, 0, Math.PI * 2);
-  ctx.fill();
-
-  if (agent.status === 'active') {
-    for (let i = 0; i < 3; i++) {
-      const phase = Math.sin(time * 0.004 + i * 1.2);
-      ctx.fillStyle = agent.color;
-      ctx.globalAlpha = 0.5 + phase * 0.5;
-      ctx.beginPath();
-      ctx.arc(cx - 6 + i * 6, cy + 20, 2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
+  for (const ex of mine) {
+    const out = ex.output as Record<string, unknown> | null;
+    if (!out) continue;
+    if (typeof out.leads_found === 'number') leads += out.leads_found;
+    if (typeof out.emails_sent === 'number') emails += out.emails_sent;
+    if (typeof out.replies === 'number') replies += out.replies;
   }
 
-  drawSpeechBubble(ctx, cx, cy - 14, agent.bubble);
+  const replyRate =
+    emails > 0 ? `${Math.round((replies / emails) * 100)}%` : '—';
+
+  return {
+    leads: leads > 0 ? String(leads) : '—',
+    emails: emails > 0 ? String(emails) : '—',
+    replyRate,
+  };
 }
 
-function buildAgentStates(
-  agents: SalesAgentRow[],
-  executions: AgentExecutionRow[],
-): AgentState[] {
-  const latestExec: Record<string, string> = {};
-  for (const ex of executions) {
-    if (!latestExec[ex.agent_id]) {
-      const out = ex.output as { summary?: string; step?: string } | null;
-      latestExec[ex.agent_id] =
-        out?.summary ?? out?.step ?? (ex.status === 'running' ? 'Trabajando...' : ex.status);
-    }
-  }
-
-  return agents
-    .filter((a) => a.status !== 'archived')
-    .slice(0, 4)
-    .map((a, i) => {
-      const slot = DESK_SLOTS[i];
-      const isActive = a.status === 'active';
-      return {
-        id: a.id,
-        name: a.name,
-        status: a.status as 'active' | 'paused',
-        bubble: isActive ? (latestExec[a.id] ?? 'Buscando leads...') : 'zzz pausado',
-        x: isActive ? slot.x + 40 : slot.x + 40 + (Math.random() - 0.5) * 60,
-        y: isActive ? slot.y + 72 : slot.y + 72 + (Math.random() - 0.5) * 40,
-        vx: isActive ? 0 : (Math.random() > 0.5 ? 0.4 : -0.4),
-        vy: isActive ? 0 : (Math.random() > 0.5 ? 0.3 : -0.3),
-        bobOffset: i * 1.3,
-        color: AGENT_COLORS[i % AGENT_COLORS.length],
-      };
-    });
+/** Obtener el mensaje de misión activa del último output */
+function getMission(executions: AgentExecutionRow[], agentId: string): string {
+  const latest = executions.find((e) => e.agent_id === agentId);
+  if (!latest) return 'Sin misión activa';
+  const out = latest.output as { summary?: string; step?: string; campaign?: string } | null;
+  return out?.campaign ?? out?.summary ?? out?.step ?? 'Campaña activa';
 }
+
+// ─── Sub-componente: barra de progreso ───────────────────────────────────────
+
+function ProgressBar({
+  value,
+  color,
+  label,
+}: {
+  value: number;
+  color: string;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <div className="flex justify-between items-center">
+        <span style={{ fontSize: '10px', color: 'rgba(200,180,255,0.7)', fontFamily: 'monospace' }}>
+          {label}
+        </span>
+        <span style={{ fontSize: '10px', color: 'rgba(200,180,255,0.9)', fontFamily: 'monospace' }}>
+          {value}%
+        </span>
+      </div>
+      <div
+        style={{
+          height: '6px',
+          background: 'rgba(255,255,255,0.08)',
+          borderRadius: '3px',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            width: `${value}%`,
+            height: '100%',
+            background: color,
+            borderRadius: '3px',
+            transition: 'width 0.6s ease',
+            boxShadow: `0 0 6px ${color}`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ─── Sub-componente: tarjeta de agente ───────────────────────────────────────
+
+function AgentCard({
+  agent,
+  executions,
+  cardIndex,
+}: {
+  agent: SalesAgentRow;
+  executions: AgentExecutionRow[];
+  cardIndex: number;
+}) {
+  const cls = AGENT_CLASSES[cardIndex % AGENT_CLASSES.length];
+  const agentExecs = executions.filter((e) => e.agent_id === agent.id);
+  const level = deriveLevel(agentExecs.length);
+  const hp = deriveHp(executions, agent.id);
+  const xp = deriveXp(agent.id);
+  const stats = deriveStats(executions, agent.id);
+  const mission = getMission(executions, agent.id);
+  const isActive = agent.status === 'active';
+
+  return (
+    <div
+      style={{
+        background: 'linear-gradient(160deg, #1a0533, #2d1b69, #1a0533)',
+        border: '1px solid rgba(168,85,247,0.4)',
+        boxShadow: '0 0 20px rgba(168,85,247,0.15), inset 0 1px 0 rgba(255,255,255,0.05)',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: '300px',
+      }}
+    >
+      {/* Header banner */}
+      <div
+        style={{
+          background: 'linear-gradient(90deg, #7c3aed, #a855f7)',
+          padding: '8px 12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <span style={{ fontSize: '11px', fontWeight: 700, color: '#fff', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+          {cls.label}
+        </span>
+        <span
+          style={{
+            fontSize: '11px',
+            fontWeight: 700,
+            color: '#fde68a',
+            background: 'rgba(0,0,0,0.25)',
+            padding: '2px 7px',
+            borderRadius: '4px',
+            letterSpacing: '0.05em',
+          }}
+        >
+          Nv. {level}
+        </span>
+      </div>
+
+      {/* Body */}
+      <div style={{ padding: '14px 14px 12px', display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
+        {/* Avatar + nombre */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div
+            style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              background: `radial-gradient(circle at 40% 40%, hsl(${cls.hue}, 80%, 35%), hsl(${cls.hue}, 60%, 15%))`,
+              border: '2px solid rgba(168,85,247,0.6)',
+              boxShadow: `0 0 12px rgba(168,85,247,0.4)`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '28px',
+              flexShrink: 0,
+            }}
+          >
+            {cls.emoji}
+          </div>
+          <div>
+            <div style={{ fontWeight: 700, color: '#f0e6ff', fontSize: '14px', lineHeight: 1.2 }}>
+              {agent.name}
+            </div>
+            <div style={{ fontSize: '11px', color: 'rgba(196,181,253,0.7)', marginTop: '2px' }}>
+              {cls.label} · Élite
+            </div>
+          </div>
+        </div>
+
+        {/* Barras HP / XP */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <ProgressBar value={hp} color="#4ade80" label="HP" />
+          <ProgressBar value={xp} color="#fbbf24" label="XP" />
+        </div>
+
+        {/* Stats grid */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr',
+            gap: '6px',
+          }}
+        >
+          {[
+            { label: 'Leads', value: stats.leads },
+            { label: 'Emails', value: stats.emails },
+            { label: 'Reply', value: stats.replyRate },
+          ].map(({ label, value }) => (
+            <div
+              key={label}
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(168,85,247,0.2)',
+                borderRadius: '6px',
+                padding: '6px 4px',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#e9d5ff', fontFamily: 'monospace' }}>
+                {value}
+              </div>
+              <div style={{ fontSize: '9px', color: 'rgba(196,181,253,0.6)', marginTop: '1px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                {label}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Footer misión */}
+      <div
+        style={{
+          borderTop: '1px solid rgba(168,85,247,0.2)',
+          padding: '8px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '7px',
+          background: 'rgba(0,0,0,0.2)',
+        }}
+      >
+        {isActive ? (
+          <>
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: '#4ade80',
+                boxShadow: '0 0 6px #4ade80',
+                flexShrink: 0,
+                animation: 'pulse 2s infinite',
+              }}
+            />
+            <span style={{ fontSize: '11px', color: 'rgba(196,181,253,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              En misión: {mission}
+            </span>
+          </>
+        ) : (
+          <>
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                background: 'rgba(156,163,175,0.5)',
+                flexShrink: 0,
+              }}
+            />
+            <span style={{ fontSize: '11px', color: 'rgba(156,163,175,0.6)' }}>
+              Pausado
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Estado vacío ─────────────────────────────────────────────────────────────
+
+function EmptyState() {
+  return (
+    <div
+      style={{
+        background: 'linear-gradient(160deg, #1a0533, #2d1b69, #1a0533)',
+        border: '1px solid rgba(168,85,247,0.3)',
+        borderRadius: '12px',
+        padding: '48px 24px',
+        textAlign: 'center',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '12px',
+      }}
+    >
+      <div style={{ fontSize: '48px' }}>⚔️</div>
+      <div style={{ fontSize: '16px', fontWeight: 700, color: '#e9d5ff' }}>
+        Sin agentes activos
+      </div>
+      <div style={{ fontSize: '13px', color: 'rgba(196,181,253,0.6)', maxWidth: '260px' }}>
+        Crea tu primer agente de ventas para comenzar la campaña
+      </div>
+    </div>
+  );
+}
+
+// ─── Componente principal ─────────────────────────────────────────────────────
 
 export function AgentOffice({ workspaceId }: { workspaceId: string }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const agentsRef = useRef<AgentState[]>([]);
-  const rafRef = useRef<ReturnType<typeof requestAnimationFrame>>(0);
   const supabase = createClient();
 
   const { data: agents } = useQuery<SalesAgentRow[]>({
@@ -223,60 +355,33 @@ export function AgentOffice({ workspaceId }: { workspaceId: string }) {
     },
   });
 
-  useEffect(() => {
-    if (!agents) return;
-    agentsRef.current = buildAgentStates(agents, executions ?? []);
-  }, [agents, executions]);
-
-  const animate = useCallback((time: number) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
-    drawFloor(ctx);
-
-    DESK_SLOTS.forEach((slot) => drawDesk(ctx, slot.x, slot.y));
-    drawPlant(ctx, 20, 20);
-    drawPlant(ctx, CANVAS_W - 20, 20);
-    drawPlant(ctx, 20, CANVAS_H - 20);
-    drawPlant(ctx, CANVAS_W - 20, CANVAS_H - 20);
-
-    agentsRef.current = agentsRef.current.map((a) => {
-      if (a.status === 'paused') {
-        let nx = a.x + a.vx;
-        let ny = a.y + a.vy;
-        let nvx = a.vx;
-        let nvy = a.vy;
-        if (nx < 20 || nx > CANVAS_W - 20) nvx = -nvx;
-        if (ny < 20 || ny > CANVAS_H - 20) nvy = -nvy;
-        nx = Math.max(20, Math.min(CANVAS_W - 20, nx));
-        ny = Math.max(20, Math.min(CANVAS_H - 20, ny));
-        return { ...a, x: nx, y: ny, vx: nvx, vy: nvy };
-      }
-      return a;
-    });
-
-    agentsRef.current.forEach((a) => drawAgent(ctx, a, time));
-
-    rafRef.current = requestAnimationFrame(animate);
-  }, []);
-
-  useEffect(() => {
-    rafRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [animate]);
+  const visibleAgents = (agents ?? []).slice(0, 4);
 
   return (
-    <div className="rounded-xl overflow-hidden border" style={{ background: '#f5f0e8' }}>
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_W}
-        height={CANVAS_H}
-        className="w-full h-auto"
-        style={{ imageRendering: 'pixelated' }}
-      />
-    </div>
+    <>
+      {/* Keyframe pulse para el punto verde */}
+      <style>{`@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
+
+      {visibleAgents.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+            gap: '16px',
+          }}
+        >
+          {visibleAgents.map((agent, i) => (
+            <AgentCard
+              key={agent.id}
+              agent={agent}
+              executions={executions ?? []}
+              cardIndex={i}
+            />
+          ))}
+        </div>
+      )}
+    </>
   );
 }
