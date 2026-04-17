@@ -283,3 +283,85 @@ export interface BillingEvent {
   metadata: Record<string, unknown>;
   created_at: string;
 }
+
+// ─── Sales Orchestrator types ─────────────────────────────────────────────────
+
+export type AgentStatus = 'active' | 'paused' | 'archived';
+
+export interface SalesAgentRow {
+  id: string;
+  workspace_id: string;
+  slug: string;
+  name: string;
+  role: string;
+  system_prompt: string;
+  model: string;
+  config: Record<string, unknown>;
+  status: AgentStatus;
+}
+
+export interface AgentScheduleRow {
+  id: string;
+  agent_id: string;
+  cron_expression: string;
+  timezone: string;
+  input_template: Record<string, unknown>;
+  active: boolean;
+  last_run_at: string | null;
+  next_run_at: string | null;
+}
+
+export type OutreachStatus = 'pending' | 'sent' | 'failed' | 'bounced' | 'replied';
+
+export interface OutreachLogRow {
+  id: string;
+  workspace_id: string;
+  contact_id: string;
+  template_id: string;
+  agent_execution_id: string | null;
+  status: OutreachStatus;
+  gmail_message_id: string | null;
+  error: string | null;
+  sent_at: string | null;
+  created_at: string;
+}
+
+export interface EmailTemplateRow {
+  id: string;
+  workspace_id: string;
+  slug: string;
+  name: string;
+  subject: string;
+  body_text: string;
+  body_html: string | null;
+  variables: string[];
+  active: boolean;
+}
+
+export type ExecutionStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
+
+export interface AgentExecutionRow {
+  id: string;
+  agent_id: string;
+  workspace_id: string;
+  trigger: 'scheduled' | 'manual' | 'webhook';
+  status: ExecutionStatus;
+  input: Record<string, unknown>;
+  output: Record<string, unknown> | null;
+  error: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface OutreachContactRow {
+  id: string;
+  workspace_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  title: string | null;
+  company_name: string | null;
+  industry: string | null;
+  created_at: string;
+}
