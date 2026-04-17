@@ -42,20 +42,25 @@ export async function launchCampaign(
   if (tplError) return { success: false, error: `Template: ${tplError.message}` };
 
   // Call Sales Orchestrator
-  const res = await fetch(
-    `${process.env.SALES_ORCHESTRATOR_URL}/api/prospect`,
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.SALES_ORCHESTRATOR_KEY}`,
-        'Content-Type': 'application/json',
+  let res: Response;
+  try {
+    res = await fetch(
+      `${process.env.SALES_ORCHESTRATOR_URL}/api/prospect`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.SALES_ORCHESTRATOR_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templateSlug: params.templateSlug,
+          searchCriteria: params.searchCriteria,
+        }),
       },
-      body: JSON.stringify({
-        templateSlug: params.templateSlug,
-        searchCriteria: params.searchCriteria,
-      }),
-    },
-  );
+    );
+  } catch (err) {
+    return { success: false, error: `Orchestrator unreachable: ${(err as Error).message}` };
+  }
 
   if (!res.ok) {
     const text = await res.text();
