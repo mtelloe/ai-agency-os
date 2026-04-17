@@ -8,7 +8,7 @@ import { useUser } from '@/hooks/use-user';
 import {
   LayoutDashboard, Cpu, ClipboardList, Sparkles, MessageSquare,
   PenTool, FileText, Users, Radar, Zap, BookOpen, LayoutTemplate,
-  CreditCard, ShieldCheck, Rocket,
+  CreditCard, ShieldCheck, Rocket, TrendingUp,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -25,6 +25,7 @@ export const NAV_ITEMS = [
   { href: '/nichos', label: 'Nichos', icon: BookOpen },
   { href: '/plantillas', label: 'Plantillas', icon: LayoutTemplate },
   { href: '/facturacion', label: 'Facturación', icon: CreditCard },
+  { href: '/ventas', label: 'Ventas IA', icon: TrendingUp },
 ];
 
 export const ADMIN_ITEMS = [
