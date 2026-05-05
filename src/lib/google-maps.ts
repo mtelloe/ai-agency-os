@@ -1,5 +1,4 @@
-const APIFY_TOKEN = process.env.APIFY_API_TOKEN;
-const ACTOR_ID = 'nwua9~google-maps-scraper';
+const GOOGLE_API_KEY = process.env.GOOGLE_API_KEY;
 
 export interface GoogleMapsResult {
   title: string;
@@ -15,87 +14,108 @@ export interface GoogleMapsResult {
 }
 
 /**
- * Search Google Maps for businesses.
+ * Search Google Maps for businesses using the Google Places API (New).
  * @param query - Search query (e.g. "centro estetica Barcelona")
  * @param maxResults - How many results to return
- * @param excludeNames - Businesses already in the system (normalized lowercase names) to skip
+ * @param excludeNames - Businesses already in the system to skip
  */
 export async function searchGoogleMaps(
   query: string,
   maxResults: number = 5,
   excludeNames: string[] = [],
 ): Promise<GoogleMapsResult[]> {
-  if (!APIFY_TOKEN) return [];
+  if (!GOOGLE_API_KEY) {
+    console.error('[google-maps] GOOGLE_API_KEY not set');
+    return [];
+  }
 
   try {
-    // Request MORE results than needed so we can filter out duplicates
-    const requestCount = maxResults + excludeNames.length + 5;
-
     const res = await fetch(
-      `https://api.apify.com/v2/acts/${ACTOR_ID}/run-sync-get-dataset-items?token=${APIFY_TOKEN}`,
+      'https://places.googleapis.com/v1/places:searchText',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': GOOGLE_API_KEY,
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.nationalPhoneNumber,places.websiteUri,places.formattedAddress,places.rating,places.userRatingCount,places.primaryTypeDisplayName',
+        },
         body: JSON.stringify({
-          searchStringsArray: [query],
-          maxCrawledPlacesPerSearch: Math.min(requestCount, 30),
-          language: 'es',
-          countryCode: 'es',
-          skipClosedPlaces: true,
+          textQuery: query,
+          languageCode: 'es',
+          regionCode: 'ES',
+          pageSize: Math.min(maxResults + excludeNames.length + 5, 20),
         }),
-        signal: AbortSignal.timeout(120000),
+        signal: AbortSignal.timeout(15000),
       }
     );
 
-    if (!res.ok) return [];
+    if (!res.ok) {
+      const err = await res.text();
+      console.error('[google-maps] Places API error:', res.status, err);
+      return [];
+    }
 
-    const items = await res.json();
-    if (!Array.isArray(items)) return [];
+    const data = await res.json();
+    const places: unknown[] = data.places || [];
 
     const excludeSet = new Set(excludeNames.map(n => normalizeName(n)));
-
     const results: GoogleMapsResult[] = [];
-    for (const item of items) {
-      const title = (item.title as string) || '';
+
+    for (const place of places) {
+      const p = place as Record<string, unknown>;
+      const displayName = p.displayName as { text?: string } | undefined;
+      const title = displayName?.text || '';
       if (!title) continue;
 
-      // Skip if this business is already in the system
       if (excludeSet.has(normalizeName(title))) continue;
 
-      // Skip if we already have this one in current results (same name or same phone)
-      const phone = (item.phone as string) || null;
-      const website = (item.website as string) || null;
+      const phone = (p.nationalPhoneNumber as string) || null;
+      const website = (p.websiteUri as string) || null;
+      const placeId = (p.id as string) || null;
+
       if (results.some(r =>
         normalizeName(r.title) === normalizeName(title) ||
         (phone && r.phone === phone) ||
         (website && r.website && normalizeUrl(r.website) === normalizeUrl(website))
       )) continue;
 
+      const primaryType = p.primaryTypeDisplayName as { text?: string } | undefined;
+
       results.push({
         title,
         phone,
         website,
-        address: (item.address as string) || null,
-        city: (item.city as string) || null,
-        totalScore: (item.totalScore as number) || null,
-        reviewsCount: (item.reviewsCount as number) || null,
-        categoryName: (item.categoryName as string) || null,
-        placeId: (item.placeId as string) || null,
-        googleMapsUrl: (item.url as string) || null,
+        address: (p.formattedAddress as string) || null,
+        city: extractCity(p.formattedAddress as string | undefined),
+        totalScore: (p.rating as number) || null,
+        reviewsCount: (p.userRatingCount as number) || null,
+        categoryName: primaryType?.text || null,
+        placeId,
+        googleMapsUrl: placeId ? `https://www.google.com/maps/place/?q=place_id:${placeId}` : null,
       });
 
       if (results.length >= maxResults) break;
     }
 
     return results;
-  } catch {
+  } catch (err) {
+    console.error('[google-maps] Unexpected error:', err);
     return [];
   }
 }
 
+function extractCity(address: string | undefined): string | null {
+  if (!address) return null;
+  // Spanish addresses: "Calle X, 12, 28001 Madrid, Spain" — city is last before ", Spain"
+  const parts = address.replace(/, España$/, '').replace(/, Spain$/, '').split(',');
+  const last = parts[parts.length - 1]?.trim();
+  // Strip postal code prefix if present: "28001 Madrid" → "Madrid"
+  return last?.replace(/^\d{5}\s+/, '') || null;
+}
+
 function normalizeName(name: string): string {
   return name.toLowerCase().trim()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\s+/g, ' ');
 }
