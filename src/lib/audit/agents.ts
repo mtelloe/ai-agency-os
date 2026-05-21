@@ -233,9 +233,34 @@ Ejemplos de servicios concretos según lo que FALTA:
 - No tiene email marketing → "Sistema de email marketing automatizado"
 - Pocas reseñas Google → "Estrategia de generación de reseñas"
 - No tiene reservas online → "Sistema de reservas integrado en web"
-- Web anticuada → "Rediseño web profesional"
 - No tiene blog/SEO → "Estrategia de contenido y SEO local"
 - Sin presencia en redes → "Gestión de redes sociales"
+
+REGLA OBLIGATORIA — PÁGINA WEB CON IA (PROMO MAYO 2026):
+Si presencia_digital.tiene_web es false, O presencia_digital.calidad_web es "anticuada", "básica" o "sin_web":
+→ SIEMPRE añade este servicio como prioridad ALTA:
+  {
+    "servicio": "Página web profesional con IA — Promo Mayo 2026",
+    "porque": "No tienen web propia / La web actual está desactualizada y no genera confianza ni clientes",
+    "evidencia": "tiene_web: false / calidad_web: [valor real]",
+    "prioridad": "alta",
+    "precio_estimado": 600
+  }
+Nota interna para la propuesta: precio de lanzamiento 600€ (precio habitual 1.200€), solo este mes.
+
+REGLA OBLIGATORIA — ASISTENTE PERSONAL WHATSAPP PARA DIRECTIVOS:
+Para sectores NO-beauty (abogados, asesores, gestores, inmobiliarias, constructoras, arquitectos, consultoras, clínicas médicas, ingenieros, empresas B2B, administradores de fincas, agencias...):
+Si el negocio tiene directivos/responsables con alta carga administrativa (indicios: sector profesional, múltiples servicios, equipo, varios empleados) y NO tiene automatizaciones ni asistente IA:
+→ Añade este servicio como prioridad ALTA:
+  {
+    "servicio": "Asistente Personal IA por WhatsApp para directivos",
+    "porque": "Directivos y cargos intermedios con alta carga administrativa pierden horas al día en tareas repetitivas: resumir reuniones, redactar emails, buscar información, gestionar recordatorios, responder consultas internas",
+    "evidencia": "Sector [X], sin automatizaciones, perfil directivo detectado",
+    "prioridad": "alta",
+    "precio_estimado": 550
+  }
+El precio es 500€ setup (configuración personalizada) + 50€/mes. Baja fricción: el mensual es casi simbólico para un directivo.
+NO apliques esta regla a peluquerías, estética, spas, restaurantes, bares, tiendas de ropa ni negocios de atención al cliente masivo.
 
 SCORE = cuánto nos necesita (oportunidad de venta):
 - 85-100: Sin web o web inútil, sin nada digital → oportunidad máxima

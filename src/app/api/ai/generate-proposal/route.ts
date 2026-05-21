@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       automatizaciones: auditoria.automatizaciones_recomendadas || [],
       agentes: auditoria.agentes_recomendados || [],
       pricing: auditoria.pricing_sugerido,
+      servicios_a_ofrecer: auditoria.servicios_a_ofrecer || [],
     });
 
     const rawResponse = await callClaude(GENERATE_PROPOSAL_SYSTEM, prompt);
