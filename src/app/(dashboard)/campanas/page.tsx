@@ -13,7 +13,7 @@ import { Loader2, Mail, Copy, Check, Sparkles, MapPin, Phone } from 'lucide-reac
 import { toast } from 'sonner';
 
 const BEAUTY_NICHOS = ['centros de estetica', 'peluquerias', 'belleza', 'spa', 'depilacion', 'nail'];
-const PRO_NICHOS = ['asesorias', 'gestorias', 'abogados', 'inmobiliarias', 'arquitectos', 'consultoras', 'construccion', 'administradores', 'agencias', 'contables'];
+const PRO_NICHOS = ['asesor', 'gestor', 'abogado', 'inmobiliaria', 'arquitecto', 'consultor', 'construccion', 'administrador', 'agencia', 'contable'];
 
 type Empresa = {
   id: string;
