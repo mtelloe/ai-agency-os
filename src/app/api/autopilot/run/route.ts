@@ -204,10 +204,10 @@ function handleEstimate(body: { cantidad?: number }) {
 // ─── Action: prospect ───────────────────────────────────────────────
 
 async function handleProspect(
-  body: { nicho: string; ciudad: string; cantidad?: number; workspaceId: string; userId: string },
+  body: { nicho: string; ciudad: string; cantidad?: number; workspaceId: string; userId: string; soloSinWeb?: boolean },
   token: string
 ) {
-  const { nicho, ciudad, workspaceId, userId } = body;
+  const { nicho, ciudad, workspaceId, userId, soloSinWeb } = body;
   const cantidad = Math.min(Math.max(1, Number(body.cantidad) || 5), 20);
 
   if (!nicho || !ciudad || !workspaceId || !userId) {
@@ -256,8 +256,10 @@ async function handleProspect(
   const spent2 = await spendCredit(workspaceId, userId, 'prospeccion', `Autopilot: Prospección (2/2) ${nicho} en ${ciudad}`, token);
   if (!spent2) return NextResponse.json({ error: 'No tienes créditos suficientes' }, { status: 402 });
 
-  // Search Google Maps — pass existing names so Apify fetches extras to compensate
-  const mapResults = await searchGoogleMaps(`${nicho} ${ciudad}`, cantidad, existingNames);
+  // Search Google Maps — request more results when filtering by sin-web to compensate
+  const searchCantidad = soloSinWeb ? Math.min(cantidad * 3, 60) : cantidad;
+  const allResults = await searchGoogleMaps(`${nicho} ${ciudad}`, searchCantidad, existingNames);
+  const mapResults = soloSinWeb ? allResults.filter((b: any) => !b.website) : allResults;
 
   if (mapResults.length === 0) {
     return NextResponse.json({ error: 'No se encontraron negocios NUEVOS en Google Maps. Puede que ya tengas todos los del área.' }, { status: 404 });
@@ -265,7 +267,7 @@ async function handleProspect(
 
   const results: Array<{ empresaId: string; nombre: string; website: string; email: string }> = [];
 
-  for (const biz of mapResults) {
+  for (const biz of mapResults.slice(0, cantidad)) {
     // Double-check deduplication by website and phone
     if (biz.website) {
       try {

@@ -38,6 +38,7 @@ import {
   Zap,
   CreditCard,
   RotateCcw,
+  WifiOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
@@ -50,11 +51,30 @@ const NICHOS = [
   'Inmobiliarias',
   'Centros de estetica',
   'Abogados',
+  'Asesorias fiscales',
+  'Gestorias',
+  'Arquitectos',
+  'Consultoras',
+  'Administradores de fincas',
+  'Agencias de marketing',
+  'Empresas de construccion',
+  'Albaniles',
+  'Fontaneros',
+  'Electricistas',
+  'Estructuristas',
+  'Reformas del hogar',
+  'Instaladores de climatizacion',
+  'Carpinteros',
+  'Pintores',
+  'Cristaleros',
   'Gimnasios',
   'Autoescuelas',
   'Clinicas veterinarias',
   'Academias de idiomas',
   'Talleres mecanicos',
+  'Peluquerias',
+  'Contables',
+  'Fisioterapeutas',
 ];
 
 const CANTIDADES = [
@@ -119,6 +139,7 @@ export default function AutopilotPage() {
   const [ciudad, setCiudad] = useState('');
   const [cantidad, setCantidad] = useState('5');
   const [sendEmails, setSendEmails] = useState(false);
+  const [soloSinWeb, setSoloSinWeb] = useState(false);
 
   // Execution state
   const [running, setRunning] = useState(false);
@@ -204,6 +225,7 @@ export default function AutopilotPage() {
         cantidad: Number(cantidad),
         workspaceId: workspace.id,
         userId: user.id,
+        soloSinWeb,
       });
 
       const prospectResults: ProspectResult[] = prospectData.prospects || [];
@@ -419,6 +441,7 @@ export default function AutopilotPage() {
     setCiudad('');
     setCantidad('5');
     setSendEmails(false);
+    setSoloSinWeb(false);
     setProspects([]);
     setAudits([]);
     setGenerated([]);
@@ -539,6 +562,18 @@ export default function AutopilotPage() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Solo sin web switch */}
+            <div className="flex items-center justify-between rounded-lg border border-white/10 bg-zinc-900/30 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <WifiOff className="h-4 w-4 text-orange-400" />
+                <div>
+                  <p className="text-sm font-medium">Solo sin web</p>
+                  <p className="text-xs text-muted-foreground">Filtra negocios sin página web — prospectos ideales para vender web</p>
+                </div>
+              </div>
+              <Switch checked={soloSinWeb} onCheckedChange={setSoloSinWeb} />
             </div>
 
             {/* Send emails switch */}
