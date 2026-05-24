@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
     const db = createApiClient(token);
     const body = await request.json();
-    const { nicho, ciudad, workspaceId, userId } = body;
+    const { nicho, ciudad, workspaceId, userId, soloSinWeb } = body;
     const cantidad = Math.min(Math.max(1, Number(body.cantidad) || 5), 20);
 
     if (!nicho || !ciudad || !workspaceId || !userId) {
@@ -28,8 +28,8 @@ export async function POST(request: NextRequest) {
     const spent2 = await spendCredit(workspaceId, userId, 'prospeccion', `Prospeccion (2/2): ${nicho} en ${ciudad}`, token);
     if (!spent2) return NextResponse.json({ error: 'No tienes creditos suficientes' }, { status: 402 });
 
-    // If n8n is configured, use the async pipeline (Apify + Apollo enrichment)
-    if (isN8nConfigured()) {
+    // If n8n is configured AND not filtering by sin-web, use async pipeline
+    if (isN8nConfigured() && !soloSinWeb) {
       await triggerN8nWebhook('prospect-enrich', {
         workspace_id: workspaceId,
         nicho,
@@ -69,15 +69,22 @@ export async function POST(request: NextRequest) {
     );
 
     const query = `${nicho} ${ciudad}`;
-    const mapResults = await searchGoogleMaps(query, cantidad, existingNames);
+    // Request more results when filtering by sin-web to compensate for filtered-out entries
+    const searchCantidad = soloSinWeb ? Math.min(cantidad * 3, 60) : cantidad;
+    const mapResults = await searchGoogleMaps(query, searchCantidad, existingNames);
 
     if (mapResults.length === 0) {
       return NextResponse.json({ error: 'No se encontraron negocios NUEVOS en Google Maps.' }, { status: 404 });
     }
 
+    // Filter for businesses without website if requested
+    const filtered = soloSinWeb ? mapResults.filter((b: any) => !b.website) : mapResults;
+
     const createdLeads = [];
 
-    for (const biz of mapResults) {
+    const sinWebCount = filtered.filter((b: any) => !b.website).length;
+
+    for (const biz of filtered.slice(0, cantidad)) {
       if (biz.website) {
         try {
           const domain = new URL(biz.website).hostname.replace('www.', '').toLowerCase();
@@ -142,7 +149,7 @@ export async function POST(request: NextRequest) {
       `Prospeccion directa: ${createdLeads.length} negocios de ${nicho} en ${ciudad} (sin enriquecimiento)`,
       token, 'leads', createdLeads[0]?.id);
 
-    return NextResponse.json({ leads: createdLeads, total: createdLeads.length, async: false });
+    return NextResponse.json({ leads: createdLeads, total: createdLeads.length, sinWeb: sinWebCount, async: false });
   } catch (error) {
     console.error('Prospect error:', error);
     return NextResponse.json({ error: 'Error al prospectar.' }, { status: 500 });

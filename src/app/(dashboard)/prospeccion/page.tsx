@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Radar, CheckCircle2, MapPin, Users } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Loader2, Radar, CheckCircle2, MapPin, Users, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 const NICHOS = [
@@ -32,14 +33,21 @@ const NICHOS = [
   'Administradores de fincas',
   'Agencias de marketing',
   'Empresas de construccion',
+  'Albaniles',
+  'Fontaneros',
+  'Electricistas',
+  'Estructuristas',
+  'Reformas del hogar',
+  'Instaladores de climatizacion',
+  'Carpinteros',
+  'Pintores',
+  'Cristaleros',
   'Gimnasios',
   'Autoescuelas',
   'Clinicas veterinarias',
   'Academias de idiomas',
   'Talleres mecanicos',
   'Peluquerias',
-  'Fontaneros',
-  'Electricistas',
   'Contables',
   'Fisioterapeutas',
 ];
@@ -53,8 +61,10 @@ export default function ProspeccionPage() {
   const [nicho, setNicho] = useState('');
   const [ciudad, setCiudad] = useState('');
   const [cantidad, setCantidad] = useState('5');
+  const [soloSinWeb, setSoloSinWeb] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [resultados, setResultados] = useState<{ total: number; sinWeb: number } | null>(null);
 
   const creditos = wsLoading
     ? '...'
@@ -66,6 +76,7 @@ export default function ProspeccionPage() {
 
     setLoading(true);
     setDone(false);
+    setResultados(null);
 
     try {
       const res = await authFetch('/api/ai/prospect', {
@@ -76,6 +87,7 @@ export default function ProspeccionPage() {
           cantidad: parseInt(cantidad),
           workspaceId: workspace.id,
           userId: user.id,
+          soloSinWeb,
         }),
       });
 
@@ -93,10 +105,11 @@ export default function ProspeccionPage() {
 
       if (data.async) {
         setDone(true);
-        toast.success('Prospeccion iniciada. Los leads apareceran en el pipeline en 1-2 minutos con datos del decisor.');
+        toast.success('Prospeccion iniciada. Los leads apareceran en el pipeline en 1-2 minutos.');
       } else {
         setDone(true);
-        toast.success(`${data.total} leads encontrados y anadidos al pipeline.`);
+        setResultados({ total: data.total, sinWeb: data.sinWeb ?? 0 });
+        toast.success(`${data.total} leads${soloSinWeb ? ' sin web' : ''} añadidos al pipeline.`);
       }
 
       queryClient.invalidateQueries({ queryKey: ['workspace'] });
@@ -172,6 +185,20 @@ export default function ProspeccionPage() {
               </Select>
             </div>
 
+            <div className="flex items-center justify-between rounded-lg border border-white/10 bg-zinc-900/30 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <WifiOff className="h-4 w-4 text-orange-400" />
+                <div>
+                  <p className="text-sm font-medium">Solo sin web</p>
+                  <p className="text-xs text-muted-foreground">Filtra solo negocios sin página web — mejores prospectos para la agencia</p>
+                </div>
+              </div>
+              <Switch
+                checked={soloSinWeb}
+                onCheckedChange={setSoloSinWeb}
+              />
+            </div>
+
             <Button
               type="submit"
               className="w-full"
@@ -185,7 +212,7 @@ export default function ProspeccionPage() {
               ) : (
                 <>
                   <Users className="h-4 w-4 mr-2" />
-                  Buscar leads
+                  {soloSinWeb ? 'Buscar leads sin web' : 'Buscar leads'}
                 </>
               )}
             </Button>
@@ -199,7 +226,7 @@ export default function ProspeccionPage() {
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-4" />
             <p className="font-medium">Buscando negocios en Google Maps...</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Esto puede tardar 1-2 minutos. Buscando {nicho} en {ciudad} y encontrando al decisor.
+              Buscando {nicho} en {ciudad}{soloSinWeb ? ' sin página web' : ''}.
             </p>
           </CardContent>
         </Card>
@@ -210,11 +237,15 @@ export default function ProspeccionPage() {
           <CardContent className="p-6 flex items-start gap-4">
             <CheckCircle2 className="h-6 w-6 text-green-500 mt-0.5 shrink-0" />
             <div>
-              <p className="font-medium">Prospeccion en curso</p>
+              <p className="font-medium">
+                {resultados
+                  ? `${resultados.total} leads añadidos${soloSinWeb ? ` (todos sin web)` : ''}`
+                  : 'Prospección en curso'}
+              </p>
               <p className="text-sm text-muted-foreground mt-1">
-                Los leads apareceran en el{' '}
+                Los leads aparecerán en el{' '}
                 <a href="/pipeline" className="underline text-primary">Pipeline</a>
-                {' '}en unos minutos con el email del responsable cuando este disponible.
+                {' '}con el email del responsable cuando esté disponible.
               </p>
             </div>
           </CardContent>
