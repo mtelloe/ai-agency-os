@@ -6,10 +6,12 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { Copy, Check, Users, MessageSquare, Star, Megaphone, BookOpen, HelpCircle, EyeOff, RefreshCw } from 'lucide-react';
 
-const sqt = createClient(
-  process.env.NEXT_PUBLIC_SQT_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SQT_SUPABASE_ANON_KEY!
-);
+function getSqtClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SQT_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SQT_SUPABASE_ANON_KEY!
+  );
+}
 
 type Mensaje = {
   id: string;
@@ -144,7 +146,7 @@ export default function SqtComunidadPage() {
 
   const cargar = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await sqt
+    const { data, error } = await getSqtClient()
       .from('sqt_messages')
       .select('id,sent_at,sender_phone,sender_name,type,raw_content,transcription,ai_description,tags,sentiment,categoria')
       .order('sent_at', { ascending: false })
@@ -158,7 +160,7 @@ export default function SqtComunidadPage() {
 
   async function setCategoria(id: string, categoria: string | null) {
     setSavingId(id);
-    const { error } = await sqt
+    const { error } = await getSqtClient()
       .from('sqt_messages')
       .update({ categoria })
       .eq('id', id);
