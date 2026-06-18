@@ -8,7 +8,7 @@ import { useUser } from '@/hooks/use-user';
 import {
   LayoutDashboard, Cpu, ClipboardList, Sparkles, MessageSquare,
   PenTool, FileText, Users, Radar, Zap, BookOpen, LayoutTemplate,
-  CreditCard, ShieldCheck, Rocket, TrendingUp, Megaphone,
+  CreditCard, ShieldCheck, Rocket, TrendingUp, Megaphone, Droplets,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -17,6 +17,8 @@ export const NAV_ITEMS = [
   { href: '/prospeccion', label: 'Prospección', icon: Radar },
   { href: '/campanas', label: 'Campañas', icon: Megaphone },
   { href: '/pipeline', label: 'Pipeline CRM', icon: Users },
+  { href: '/sqt', label: 'SQT Pipeline', icon: Droplets },
+  { href: '/sqt/comunidad', label: 'SQT Comunidad', icon: MessageSquare },
   { href: '/analizador', label: 'Analizador', icon: Cpu },
   { href: '/auditorias', label: 'Auditorías', icon: ClipboardList },
   { href: '/agentes', label: 'Agentes IA', icon: Sparkles },
