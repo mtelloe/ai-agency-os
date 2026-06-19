@@ -20,6 +20,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 });
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(String(to))) {
+      return NextResponse.json({ error: 'Dirección de email inválida' }, { status: 400 });
+    }
+
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     if (!uuidRegex.test(workspaceId) || !uuidRegex.test(userId)) {
       return NextResponse.json({ error: 'Formato de ID invalido' }, { status: 400 });

@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createApiClient, getTokenFromRequest } from '@/lib/supabase/api-client';
+import { createClient } from '@/lib/supabase/server';
+
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,7 +10,14 @@ export async function GET(request: NextRequest) {
     if (!token) return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
 
     const db = createApiClient(token);
-    const isAdmin = request.nextUrl.searchParams.get('admin') === 'true';
+    const requestedAdmin = request.nextUrl.searchParams.get('admin') === 'true';
+
+    let isAdmin = false;
+    if (requestedAdmin && ADMIN_EMAILS.length > 0) {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      isAdmin = !!user?.email && ADMIN_EMAILS.includes(user.email);
+    }
 
     if (isAdmin) {
       // Admin view: all workspaces usage (uses service role or admin check)
