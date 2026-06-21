@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import Script from 'next/script';
-import { Inter } from 'next/font/google';
+import { Inter, Syne } from 'next/font/google';
 import { QueryProvider } from '@/providers/query-provider';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'], display: 'swap' });
+const inter = Inter({ subsets: ['latin'], variable: '--font-ui', display: 'swap' });
+const syne = Syne({ subsets: ['latin'], weight: ['600', '700', '800'], variable: '--font-display', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'AI Agency OS',
@@ -18,7 +19,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${inter.className} dark`}>
+    <html lang="es" className={`${inter.variable} ${syne.variable} dark`}>
       <body>
         <noscript>
           <iframe
