@@ -3,7 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase/client';
 import type { Actividad } from '@/lib/types/database';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Activity } from 'lucide-react';
 import { EmptyState } from '@/components/shared/empty-state';
@@ -35,11 +34,27 @@ export function ActivityFeed() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Actividad reciente</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div
+      className="rounded-xl"
+      style={{
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+      }}
+    >
+      <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="flex items-center gap-2">
+          <Activity size={16} style={{ color: '#C77DFF' }} />
+          <span style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '13px',
+            fontWeight: 600,
+            color: '#fff',
+          }}>Actividad reciente</span>
+        </div>
+      </div>
+      <div className="p-4">
         {!activities?.length ? (
           <EmptyState
             icon={Activity}
@@ -50,18 +65,33 @@ export function ActivityFeed() {
           <ScrollArea className="h-[300px]">
             <div className="space-y-3">
               {activities.map((a) => (
-                <div key={a.id} className="flex items-start gap-3 text-sm">
-                  <div className="h-2 w-2 rounded-full bg-primary mt-1.5 shrink-0" />
+                <div
+                  key={a.id}
+                  className="flex items-start gap-3"
+                  style={{
+                    fontSize: '13px',
+                    paddingBottom: '12px',
+                    borderBottom: '1px solid rgba(255,255,255,0.05)',
+                  }}
+                >
+                  <div style={{
+                    height: '8px',
+                    width: '8px',
+                    borderRadius: '50%',
+                    background: '#C77DFF',
+                    marginTop: '6px',
+                    flexShrink: 0,
+                  }} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-foreground">{a.descripcion}</p>
-                    <p className="text-xs text-muted-foreground">{timeAgo(a.created_at)}</p>
+                    <p style={{ color: 'rgba(255,255,255,0.8)' }}>{a.descripcion}</p>
+                    <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', marginTop: '2px' }}>{timeAgo(a.created_at)}</p>
                   </div>
                 </div>
               ))}
             </div>
           </ScrollArea>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

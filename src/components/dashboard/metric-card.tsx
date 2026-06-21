@@ -1,6 +1,4 @@
-import { Card, CardContent } from '@/components/ui/card';
 import { type LucideIcon } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 interface MetricCardProps {
   title: string;
@@ -12,23 +10,56 @@ interface MetricCardProps {
 
 export function MetricCard({ title, value, icon: Icon, trend, trendUp }: MetricCardProps) {
   return (
-    <Card>
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold mt-1">{value}</p>
-            {trend && (
-              <p className={cn('text-xs mt-1', trendUp ? 'text-green-500' : 'text-red-500')}>
-                {trend}
-              </p>
-            )}
-          </div>
-          <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <Icon className="h-5 w-5 text-primary" />
-          </div>
+    <div
+      className="rounded-xl p-5"
+      style={{
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+      }}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p style={{
+            fontSize: '10px',
+            fontWeight: 600,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase' as const,
+            color: 'rgba(255,255,255,0.35)',
+            marginBottom: '6px',
+          }}>{title}</p>
+          <p style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '28px',
+            fontWeight: 700,
+            letterSpacing: '-0.03em',
+            color: '#fff',
+            lineHeight: 1,
+          }}>{value}</p>
+          {trend && (
+            <p style={{
+              fontSize: '11px',
+              marginTop: '4px',
+              color: trendUp ? '#6EC5A8' : 'rgba(255,100,100,0.8)',
+            }}>
+              {trend}
+            </p>
+          )}
         </div>
-      </CardContent>
-    </Card>
+        <div style={{
+          height: '40px',
+          width: '40px',
+          borderRadius: '10px',
+          background: 'rgba(199,125,255,0.12)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <Icon size={18} style={{ color: '#C77DFF' }} />
+        </div>
+      </div>
+    </div>
   );
 }
