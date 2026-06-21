@@ -8,7 +8,7 @@ import { useUser } from '@/hooks/use-user';
 import {
   LayoutDashboard, Cpu, ClipboardList, Sparkles, MessageSquare,
   PenTool, FileText, Users, Radar, Zap, BookOpen, LayoutTemplate,
-  CreditCard, ShieldCheck, Rocket, TrendingUp, Megaphone, Droplets,
+  CreditCard, ShieldCheck, Rocket, TrendingUp, Megaphone, Droplets, Globe,
 } from 'lucide-react';
 
 export const NAV_ITEMS = [
@@ -29,6 +29,7 @@ export const NAV_ITEMS = [
   { href: '/plantillas', label: 'Plantillas', icon: LayoutTemplate },
   { href: '/facturacion', label: 'Facturación', icon: CreditCard },
   { href: '/ventas', label: 'Ventas IA', icon: TrendingUp },
+  { href: '/portales', label: 'Portales cliente', icon: Globe },
 ];
 
 export const ADMIN_ITEMS = [
