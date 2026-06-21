@@ -5,14 +5,63 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from '@/components/ui/card';
+
+const glassCard: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.10)',
+  backdropFilter: 'blur(24px)',
+  WebkitBackdropFilter: 'blur(24px)',
+  borderRadius: 20,
+  padding: 36,
+  width: '100%',
+};
+
+const inputStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.12)',
+  color: '#fff',
+  borderRadius: 10,
+  padding: '10px 14px',
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #C77DFF, #FF6FA3)',
+  color: '#fff',
+  border: 'none',
+  boxShadow: '0 0 24px rgba(199,125,255,0.25)',
+  flex: 1,
+};
+
+const outlineButtonStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.06)',
+  color: 'rgba(255,255,255,0.7)',
+  border: '1px solid rgba(255,255,255,0.15)',
+  flex: 1,
+};
+
+const featureItemStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'flex-start',
+  gap: 14,
+  padding: '12px 14px',
+  borderRadius: 12,
+  background: 'rgba(255,255,255,0.04)',
+  border: '1px solid rgba(255,255,255,0.08)',
+};
+
+const featureBadgeStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  height: 32,
+  width: 32,
+  flexShrink: 0,
+  borderRadius: '50%',
+  background: 'linear-gradient(135deg, #C77DFF, #FF6FA3)',
+  color: '#fff',
+  fontSize: 13,
+  fontWeight: 700,
+};
 
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
@@ -52,153 +101,197 @@ export default function OnboardingPage() {
   return (
     <div className="w-full max-w-lg mx-auto">
       {/* Progress indicator */}
-      <div className="flex items-center justify-center gap-2 mb-8">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 32 }}>
         {[1, 2, 3].map((s) => (
           <div
             key={s}
-            className={`h-2 rounded-full transition-all duration-300 ${
-              s === step
-                ? 'w-10 bg-primary'
-                : s < step
-                  ? 'w-10 bg-primary/50'
-                  : 'w-10 bg-muted'
-            }`}
+            style={{
+              height: 6,
+              width: 40,
+              borderRadius: 999,
+              transition: 'all 0.3s',
+              background:
+                s === step
+                  ? '#C77DFF'
+                  : s < step
+                    ? 'rgba(199,125,255,0.4)'
+                    : 'rgba(255,255,255,0.15)',
+            }}
           />
         ))}
       </div>
 
       {/* Step 1: Welcome */}
       {step === 1 && (
-        <Card>
-          <CardHeader className="text-center">
-            <div className="text-4xl mb-4">🚀</div>
-            <CardTitle className="text-2xl">
+        <div style={glassCard}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <div style={{ fontSize: 40, marginBottom: 14 }}>🚀</div>
+            <h2
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: 24,
+                color: '#fff',
+                marginBottom: 8,
+              }}
+            >
               Bienvenido a AI Agency OS
-            </CardTitle>
-            <CardDescription className="text-base">
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>
               Tu plataforma autónoma para escalar tu agencia de IA
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start gap-4 p-3 rounded-lg bg-muted/50">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                  1
-                </div>
-                <div>
-                  <p className="font-medium">Audita un negocio</p>
-                  <p className="text-sm text-muted-foreground">
-                    Analiza cualquier web y descubre oportunidades de IA
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4 p-3 rounded-lg bg-muted/50">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                  2
-                </div>
-                <div>
-                  <p className="font-medium">Genera tu propuesta</p>
-                  <p className="text-sm text-muted-foreground">
-                    Crea propuestas profesionales con un clic
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-4 p-3 rounded-lg bg-muted/50">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
-                  3
-                </div>
-                <div>
-                  <p className="font-medium">Cierra el cliente</p>
-                  <p className="text-sm text-muted-foreground">
-                    Envía la propuesta y gestiona todo el pipeline
-                  </p>
-                </div>
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
+            <div style={featureItemStyle}>
+              <div style={featureBadgeStyle}>1</div>
+              <div>
+                <p style={{ color: '#fff', fontWeight: 500, fontSize: 14, marginBottom: 2 }}>Audita un negocio</p>
+                <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>
+                  Analiza cualquier web y descubre oportunidades de IA
+                </p>
               </div>
             </div>
-          </CardContent>
-          <CardFooter>
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={() => setStep(2)}
-            >
-              Empezar
-            </Button>
-          </CardFooter>
-        </Card>
+            <div style={featureItemStyle}>
+              <div style={featureBadgeStyle}>2</div>
+              <div>
+                <p style={{ color: '#fff', fontWeight: 500, fontSize: 14, marginBottom: 2 }}>Genera tu propuesta</p>
+                <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>
+                  Crea propuestas profesionales con un clic
+                </p>
+              </div>
+            </div>
+            <div style={featureItemStyle}>
+              <div style={featureBadgeStyle}>3</div>
+              <div>
+                <p style={{ color: '#fff', fontWeight: 500, fontSize: 14, marginBottom: 2 }}>Cierra el cliente</p>
+                <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 13 }}>
+                  Envía la propuesta y gestiona todo el pipeline
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            style={{ ...primaryButtonStyle, flex: 'unset', width: '100%' }}
+            size="lg"
+            onClick={() => setStep(2)}
+          >
+            Empezar
+          </Button>
+        </div>
       )}
 
       {/* Step 2: Workspace name */}
       {step === 2 && (
-        <Card>
-          <CardHeader className="text-center">
-            <div className="text-4xl mb-4">🏢</div>
-            <CardTitle className="text-2xl">
+        <div style={glassCard}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <div style={{ fontSize: 40, marginBottom: 14 }}>🏢</div>
+            <h2
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: 24,
+                color: '#fff',
+                marginBottom: 8,
+              }}
+            >
               ¿Cómo se llama tu agencia?
-            </CardTitle>
-            <CardDescription className="text-base">
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>
               Puedes cambiarlo después en los ajustes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+            </p>
+          </div>
+
+          <div style={{ marginBottom: 28 }}>
             <Input
               placeholder="Ej: NexusAI Agency"
               value={workspaceName}
               onChange={(e) => setWorkspaceName(e.target.value)}
-              className="h-10 text-base"
+              style={{ ...inputStyle, fontSize: 15 }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSaveWorkspace();
               }}
             />
-          </CardContent>
-          <CardFooter className="flex gap-3">
+          </div>
+
+          <div style={{ display: 'flex', gap: 12 }}>
             <Button
-              variant="outline"
-              className="flex-1"
+              style={outlineButtonStyle}
               onClick={() => setStep(1)}
             >
               Atrás
             </Button>
             <Button
-              className="flex-1"
+              style={primaryButtonStyle}
               size="lg"
               onClick={handleSaveWorkspace}
               disabled={!workspaceName.trim() || loading}
             >
               {loading ? 'Guardando...' : 'Continuar'}
             </Button>
-          </CardFooter>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Step 3: All set */}
       {step === 3 && (
-        <Card>
-          <CardHeader className="text-center">
-            <div className="text-4xl mb-4">🎉</div>
-            <CardTitle className="text-2xl">
-              ¡Todo listo!
-            </CardTitle>
-            <CardDescription className="text-base">
-              Tu workspace <span className="font-semibold text-foreground">{workspaceName}</span> está configurado
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-center">
-            <div className="inline-flex items-center gap-2 rounded-lg bg-primary/10 px-4 py-3 text-primary">
-              <span className="text-2xl font-bold">3</span>
-              <span className="text-sm">créditos gratis para empezar</span>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={() => router.push('/analizador')}
+        <div style={glassCard}>
+          <div style={{ textAlign: 'center', marginBottom: 28 }}>
+            <div style={{ fontSize: 40, marginBottom: 14 }}>🎉</div>
+            <h2
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: 24,
+                color: '#fff',
+                marginBottom: 8,
+              }}
             >
-              Hacer mi primera auditoría
-            </Button>
-          </CardFooter>
-        </Card>
+              ¡Todo listo!
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>
+              Tu workspace{' '}
+              <span style={{ color: '#fff', fontWeight: 600 }}>{workspaceName}</span>{' '}
+              está configurado
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 10,
+                borderRadius: 12,
+                background: 'rgba(199,125,255,0.12)',
+                border: '1px solid rgba(199,125,255,0.25)',
+                padding: '12px 20px',
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 22,
+                  fontWeight: 700,
+                  background: 'linear-gradient(135deg, #C77DFF, #FF6FA3)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                3
+              </span>
+              <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)' }}>créditos gratis para empezar</span>
+            </div>
+          </div>
+
+          <Button
+            style={{ ...primaryButtonStyle, flex: 'unset', width: '100%' }}
+            size="lg"
+            onClick={() => router.push('/analizador')}
+          >
+            Hacer mi primera auditoría
+          </Button>
+        </div>
       )}
     </div>
   );

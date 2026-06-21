@@ -6,9 +6,48 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Loader2, RefreshCw } from 'lucide-react';
+
+const glassCard: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.10)',
+  backdropFilter: 'blur(24px)',
+  WebkitBackdropFilter: 'blur(24px)',
+  borderRadius: 20,
+  padding: 36,
+  maxWidth: 420,
+  width: '100%',
+};
+
+const inputStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.12)',
+  color: '#fff',
+  borderRadius: 10,
+  padding: '10px 14px',
+};
+
+const labelStyle: React.CSSProperties = {
+  color: 'rgba(255,255,255,0.6)',
+  fontSize: 13,
+  fontWeight: 500,
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #C77DFF, #FF6FA3)',
+  color: '#fff',
+  border: 'none',
+  boxShadow: '0 0 24px rgba(199,125,255,0.25)',
+  width: '100%',
+};
+
+const outlineButtonStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.06)',
+  color: 'rgba(255,255,255,0.7)',
+  border: '1px solid rgba(255,255,255,0.15)',
+  width: '100%',
+};
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('');
@@ -140,13 +179,23 @@ export default function ResetPasswordPage() {
 
   if (sessionError) {
     return (
-      <Card>
-        <CardHeader className="text-center">
-          <CardTitle className="text-xl">Enlace no válido</CardTitle>
-          <CardDescription className="mt-2">{sessionError}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground text-center">
+      <div style={glassCard}>
+        <div style={{ textAlign: 'center', marginBottom: 24 }}>
+          <h1
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              fontSize: 22,
+              color: '#fff',
+              marginBottom: 8,
+            }}
+          >
+            Enlace no válido
+          </h1>
+          <p style={{ color: 'rgba(255,100,100,0.9)', fontSize: 14 }}>{sessionError}</p>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', textAlign: 'center' }}>
             Introduce tu email para recibir un nuevo enlace:
           </p>
           <Input
@@ -154,45 +203,58 @@ export default function ResetPasswordPage() {
             placeholder="tu@email.com"
             value={resendEmail}
             onChange={(e) => setResendEmail(e.target.value)}
+            style={inputStyle}
           />
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <Button className="w-full" onClick={handleResend} disabled={resending}>
+          <Button style={primaryButtonStyle} onClick={handleResend} disabled={resending}>
             {resending ? (
               <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Enviando...</>
             ) : (
               <><RefreshCw className="h-4 w-4 mr-2" /> Enviar nuevo enlace</>
             )}
           </Button>
-          <Button variant="outline" className="w-full" onClick={() => router.push('/login')}>
+          <Button style={outlineButtonStyle} onClick={() => router.push('/login')}>
             Volver al inicio de sesión
           </Button>
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     );
   }
 
   if (!sessionReady) {
     return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary mb-4" />
-          <p className="text-sm text-muted-foreground">Verificando enlace...</p>
-        </CardContent>
-      </Card>
+      <div style={glassCard}>
+        <div style={{ padding: '32px 0', textAlign: 'center' }}>
+          <Loader2
+            className="animate-spin mx-auto mb-4"
+            style={{ width: 32, height: 32, color: '#C77DFF' }}
+          />
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)' }}>Verificando enlace...</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Nueva contraseña</CardTitle>
-        <CardDescription>Introduce tu nueva contraseña</CardDescription>
-      </CardHeader>
+    <div style={glassCard}>
+      <div style={{ textAlign: 'center', marginBottom: 28 }}>
+        <h1
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: 24,
+            color: '#fff',
+            marginBottom: 6,
+          }}
+        >
+          Nueva contraseña
+        </h1>
+        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>Introduce tu nueva contraseña</p>
+      </div>
+
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="password">Nueva contraseña</Label>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <Label htmlFor="password" style={labelStyle}>Nueva contraseña</Label>
             <Input
               id="password"
               type="password"
@@ -201,10 +263,11 @@ export default function ResetPasswordPage() {
               placeholder="Mínimo 6 caracteres"
               required
               minLength={6}
+              style={inputStyle}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirmar contraseña</Label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <Label htmlFor="confirm-password" style={labelStyle}>Confirmar contraseña</Label>
             <Input
               id="confirm-password"
               type="password"
@@ -213,15 +276,15 @@ export default function ResetPasswordPage() {
               placeholder="Repite la contraseña"
               required
               minLength={6}
+              style={inputStyle}
             />
           </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? 'Actualizando...' : 'Actualizar contraseña'}
-          </Button>
-        </CardFooter>
+        </div>
+
+        <Button type="submit" disabled={loading} style={primaryButtonStyle}>
+          {loading ? 'Actualizando...' : 'Actualizar contraseña'}
+        </Button>
       </form>
-    </Card>
+    </div>
   );
 }

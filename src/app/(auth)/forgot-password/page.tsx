@@ -6,8 +6,40 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
+
+const glassCard: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.10)',
+  backdropFilter: 'blur(24px)',
+  WebkitBackdropFilter: 'blur(24px)',
+  borderRadius: 20,
+  padding: 36,
+  maxWidth: 420,
+  width: '100%',
+};
+
+const inputStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.12)',
+  color: '#fff',
+  borderRadius: 10,
+  padding: '10px 14px',
+};
+
+const labelStyle: React.CSSProperties = {
+  color: 'rgba(255,255,255,0.6)',
+  fontSize: 13,
+  fontWeight: 500,
+};
+
+const primaryButtonStyle: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #C77DFF, #FF6FA3)',
+  color: '#fff',
+  border: 'none',
+  boxShadow: '0 0 24px rgba(199,125,255,0.25)',
+  width: '100%',
+};
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -36,34 +68,50 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">Recuperar contraseña</CardTitle>
-        <CardDescription>Te enviaremos un enlace para restablecer tu contraseña</CardDescription>
-      </CardHeader>
+    <div style={glassCard}>
+      <div style={{ textAlign: 'center', marginBottom: 28 }}>
+        <h1
+          style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: 24,
+            color: '#fff',
+            marginBottom: 6,
+          }}
+        >
+          Recuperar contraseña
+        </h1>
+        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 14 }}>
+          Te enviaremos un enlace para restablecer tu contraseña
+        </p>
+      </div>
+
       <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="tu@email.com"
-              required
-            />
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={loading}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 24 }}>
+          <Label htmlFor="email" style={labelStyle}>Email</Label>
+          <Input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="tu@email.com"
+            required
+            style={inputStyle}
+          />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Button type="submit" disabled={loading} style={primaryButtonStyle}>
             {loading ? 'Enviando...' : 'Enviar enlace'}
           </Button>
-          <Link href="/login" className="text-sm text-muted-foreground hover:text-primary">
+          <Link
+            href="/login"
+            style={{ textAlign: 'center', fontSize: 14, color: '#C77DFF', textDecoration: 'none' }}
+          >
             Volver al inicio de sesión
           </Link>
-        </CardFooter>
+        </div>
       </form>
-    </Card>
+    </div>
   );
 }
