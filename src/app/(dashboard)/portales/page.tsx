@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Pencil } from 'lucide-react';
+import Link from 'next/link';
 
 type Fase = { estado: 'completado' | 'en_curso' | 'pendiente' };
 
@@ -64,6 +65,13 @@ export default async function PortalesPage() {
                   {empresa.portal_pin}
                 </code>
 
+                <Link
+                  href={`/portales/${empresa.portal_slug}`}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  title="Editar portal"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Link>
                 <a
                   href={`https://hub.simedalavida.com/cliente/${empresa.portal_slug}`}
                   target="_blank"
