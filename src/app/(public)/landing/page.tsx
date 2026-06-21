@@ -11,8 +11,6 @@ import {
   ArrowRight,
   Check,
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { PLANS } from '@/lib/constants';
 
 const steps = [
@@ -83,30 +81,105 @@ const planKeys = ['free', 'starter', 'pro', 'agency'] as const;
 const planMeta: Record<string, { highlighted?: boolean; badge?: string }> = {
   free: {},
   starter: {},
-  pro: { highlighted: true, badge: 'Popular' },
+  pro: { highlighted: true, badge: 'Más popular' },
   agency: {},
+};
+
+// Shared glass card style
+const glassCard: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.05)',
+  border: '1px solid rgba(255,255,255,0.08)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  borderRadius: '16px',
+  padding: '24px',
+};
+
+const glassCardHighlighted: React.CSSProperties = {
+  background: 'rgba(199,125,255,0.10)',
+  border: '1px solid rgba(199,125,255,0.3)',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  borderRadius: '16px',
+  padding: '24px',
+  boxShadow: '0 0 48px rgba(199,125,255,0.15)',
+};
+
+const iconCircle: React.CSSProperties = {
+  background: 'rgba(199,125,255,0.15)',
+  borderRadius: '12px',
+  width: '44px',
+  height: '44px',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+};
+
+const gradientTextStyle: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #C77DFF 0%, #FF6FA3 100%)',
+  WebkitBackgroundClip: 'text',
+  WebkitTextFillColor: 'transparent',
+  backgroundClip: 'text',
 };
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      {/* Navigation */}
-      <nav className="sticky top-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-xl">
+    <div className="min-h-screen text-white" style={{ fontFamily: 'var(--font-body, Inter, sans-serif)' }}>
+
+      {/* Sticky Nav */}
+      <nav
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 50,
+          background: 'rgba(8,6,15,0.8)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+        }}
+      >
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
-            <img src="/icon.svg" alt="AI Agency OS" className="h-8 w-8 rounded-lg" />
-            <span className="text-lg font-semibold">AI Agency OS</span>
+            <span
+              style={{
+                fontFamily: 'var(--font-display, Syne, sans-serif)',
+                fontWeight: 700,
+                fontSize: '1.25rem',
+              }}
+            >
+              <span style={gradientTextStyle}>AI</span>
+              <span style={{ color: 'white' }}> Agency OS</span>
+            </span>
           </div>
           <div className="flex items-center gap-3">
             <Link
               href="/login"
-              className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              style={{
+                color: 'rgba(255,255,255,0.6)',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+                padding: '8px 16px',
+                borderRadius: '8px',
+                transition: 'color 0.2s',
+              }}
+              className="hover:text-white"
             >
               Iniciar sesión
             </Link>
             <Link
               href="/register"
-              className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
+              style={{
+                background: 'linear-gradient(135deg, #C77DFF 0%, #FF6FA3 100%)',
+                color: 'white',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+                padding: '8px 20px',
+                borderRadius: '10px',
+                boxShadow: '0 0 20px rgba(199,125,255,0.3)',
+                transition: 'opacity 0.2s',
+              }}
+              className="hover:opacity-90"
             >
               Empezar gratis
             </Link>
@@ -116,42 +189,108 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        {/* Background gradient effects */}
+        {/* Background glow blobs */}
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-0 h-[600px] w-[800px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-600/20 blur-[120px]" />
-          <div className="absolute right-0 top-1/4 h-[400px] w-[400px] rounded-full bg-indigo-600/15 blur-[100px]" />
-          <div className="absolute bottom-0 left-0 h-[300px] w-[300px] rounded-full bg-blue-600/10 blur-[80px]" />
+          <div
+            className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{ width: '800px', height: '600px', background: 'rgba(199,125,255,0.18)', filter: 'blur(120px)' }}
+          />
+          <div
+            className="absolute right-0 top-1/4 rounded-full"
+            style={{ width: '400px', height: '400px', background: 'rgba(255,111,163,0.10)', filter: 'blur(100px)' }}
+          />
         </div>
 
         <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-20 sm:px-6 sm:pb-32 sm:pt-28 lg:px-8 lg:pt-36">
           <div className="mx-auto max-w-3xl text-center">
-            <Badge variant="secondary" className="mb-6 px-3 py-1">
-              Plataforma para agencias de IA
-            </Badge>
 
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
+            {/* Eyebrow */}
+            <span
+              style={{
+                display: 'inline-block',
+                color: '#C77DFF',
+                fontFamily: 'Inter, sans-serif',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                marginBottom: '24px',
+              }}
+            >
+              Plataforma para agencias de IA
+            </span>
+
+            {/* Headline */}
+            <h1
+              style={{
+                fontFamily: 'var(--font-display, Syne, sans-serif)',
+                fontWeight: 800,
+                fontSize: 'clamp(36px, 5.5vw, 72px)',
+                color: 'white',
+                letterSpacing: '-0.04em',
+                lineHeight: 1.1,
+                marginBottom: '24px',
+              }}
+            >
               Tu agencia de IA en{' '}
-              <span className="bg-gradient-to-r from-purple-400 via-indigo-400 to-blue-400 bg-clip-text text-transparent">
-                piloto automático
-              </span>
+              <span style={gradientTextStyle}>piloto automático</span>
             </h1>
 
-            <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
+            {/* Subheadline */}
+            <p
+              style={{
+                fontFamily: 'Inter, sans-serif',
+                fontWeight: 400,
+                fontSize: '1.125rem',
+                color: 'rgba(255,255,255,0.6)',
+                maxWidth: '560px',
+                margin: '0 auto 40px',
+                lineHeight: 1.7,
+              }}
+            >
               Prospecta, analiza, propone y cierra clientes mientras tú duermes.
               La plataforma que hace el trabajo de una agencia de IA completa.
             </p>
 
-            <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+            {/* CTAs */}
+            <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
               <Link
                 href="/register"
-                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-3 text-sm font-medium text-white transition-all hover:opacity-90 hover:shadow-lg hover:shadow-purple-600/25"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'linear-gradient(135deg, #C77DFF 0%, #FF6FA3 100%)',
+                  color: 'white',
+                  fontWeight: 600,
+                  fontSize: '0.9375rem',
+                  padding: '14px 28px',
+                  borderRadius: '12px',
+                  boxShadow: '0 0 40px rgba(199,125,255,0.35)',
+                  transition: 'opacity 0.2s',
+                }}
+                className="hover:opacity-90"
               >
                 Empezar gratis
                 <ArrowRight className="h-4 w-4" />
               </Link>
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-6 py-3 text-sm font-medium text-muted-foreground transition-colors hover:border-white/20 hover:text-foreground"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  color: 'rgba(255,255,255,0.8)',
+                  fontWeight: 500,
+                  fontSize: '0.9375rem',
+                  padding: '14px 28px',
+                  borderRadius: '12px',
+                  backdropFilter: 'blur(8px)',
+                  transition: 'border-color 0.2s, color 0.2s',
+                }}
+                className="hover:border-white/30 hover:text-white"
               >
                 Ver demo
               </Link>
@@ -160,29 +299,63 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="relative border-t border-white/5 bg-muted/30">
+      {/* How it works — Steps */}
+      <section
+        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+        className="relative"
+      >
         <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          <div className="mx-auto max-w-2xl text-center" style={{ marginBottom: '64px' }}>
+            <h2
+              style={{
+                fontFamily: 'var(--font-display, Syne, sans-serif)',
+                fontWeight: 700,
+                fontSize: 'clamp(28px, 3.5vw, 42px)',
+                color: 'white',
+                letterSpacing: '-0.02em',
+                marginBottom: '16px',
+              }}
+            >
               Cómo funciona
             </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.0625rem' }}>
               Tres pasos para convertir tu idea en una agencia de IA rentable
             </p>
           </div>
 
-          <div className="mx-auto mt-16 grid max-w-5xl gap-8 md:grid-cols-3">
+          <div className="mx-auto grid max-w-5xl gap-6 md:grid-cols-3">
             {steps.map((step) => (
-              <div key={step.number} className="relative text-center">
-                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 ring-1 ring-purple-500/20">
-                  <step.icon className="h-7 w-7 text-purple-400" />
+              <div key={step.number} style={glassCard}>
+                {/* Icon + step number row */}
+                <div className="flex items-start justify-between" style={{ marginBottom: '20px' }}>
+                  <div style={iconCircle}>
+                    <step.icon style={{ width: '20px', height: '20px', color: '#C77DFF' }} />
+                  </div>
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-display, Syne, sans-serif)',
+                      fontWeight: 700,
+                      fontSize: '2rem',
+                      color: 'rgba(199,125,255,0.5)',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {step.number}
+                  </span>
                 </div>
-                <span className="mb-2 block text-xs font-semibold uppercase tracking-widest text-purple-400">
-                  Paso {step.number}
-                </span>
-                <h3 className="text-xl font-semibold">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+
+                <h3
+                  style={{
+                    fontFamily: 'var(--font-display, Syne, sans-serif)',
+                    fontWeight: 700,
+                    fontSize: '1.125rem',
+                    color: 'white',
+                    marginBottom: '8px',
+                  }}
+                >
+                  {step.title}
+                </h3>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9375rem', lineHeight: 1.65 }}>
                   {step.description}
                 </p>
               </div>
@@ -194,154 +367,291 @@ export default function LandingPage() {
       {/* Features grid */}
       <section className="relative">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute right-1/4 top-1/2 h-[500px] w-[500px] -translate-y-1/2 rounded-full bg-indigo-600/10 blur-[120px]" />
+          <div
+            className="absolute right-1/4 top-1/2 -translate-y-1/2 rounded-full"
+            style={{ width: '500px', height: '500px', background: 'rgba(199,125,255,0.08)', filter: 'blur(120px)' }}
+          />
         </div>
 
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Todo lo que necesitas para escalar
+          <div className="mx-auto max-w-2xl text-center" style={{ marginBottom: '64px' }}>
+            <h2
+              style={{
+                fontFamily: 'var(--font-display, Syne, sans-serif)',
+                fontWeight: 700,
+                fontSize: 'clamp(28px, 3.5vw, 42px)',
+                color: 'white',
+                letterSpacing: '-0.02em',
+                marginBottom: '16px',
+              }}
+            >
+              Todo lo que necesitas para{' '}
+              <span style={gradientTextStyle}>escalar</span>
             </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.0625rem' }}>
               Herramientas diseñadas para que una sola persona haga el trabajo de un equipo completo
             </p>
           </div>
 
-          <div className="mx-auto mt-16 grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mx-auto grid max-w-6xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((feature) => (
-              <Card
+              <div
                 key={feature.title}
-                className="border-white/5 bg-card/50 transition-colors hover:border-purple-500/20 hover:bg-card/80"
+                style={glassCard}
+                className="transition-all duration-200 hover:border-[rgba(199,125,255,0.2)]"
               >
-                <CardHeader>
-                  <div className="mb-2 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-purple-500/20 to-indigo-500/20 ring-1 ring-purple-500/20">
-                    <feature.icon className="h-5 w-5 text-purple-400" />
-                  </div>
-                  <CardTitle>{feature.title}</CardTitle>
-                  <CardDescription>{feature.description}</CardDescription>
-                </CardHeader>
-              </Card>
+                <div style={{ ...iconCircle, background: 'rgba(199,125,255,0.12)', marginBottom: '16px' }}>
+                  <feature.icon style={{ width: '20px', height: '20px', color: '#C77DFF' }} />
+                </div>
+                <h3
+                  style={{
+                    fontFamily: 'var(--font-display, Syne, sans-serif)',
+                    fontWeight: 600,
+                    fontSize: '1rem',
+                    color: 'white',
+                    marginBottom: '8px',
+                  }}
+                >
+                  {feature.title}
+                </h3>
+                <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.9rem', lineHeight: 1.65 }}>
+                  {feature.description}
+                </p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
       {/* Pricing */}
-      <section className="relative border-t border-white/5 bg-muted/30">
+      <section
+        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}
+        className="relative"
+      >
         <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          <div className="mx-auto max-w-2xl text-center" style={{ marginBottom: '64px' }}>
+            <h2
+              style={{
+                fontFamily: 'var(--font-display, Syne, sans-serif)',
+                fontWeight: 700,
+                fontSize: 'clamp(28px, 3.5vw, 42px)',
+                color: 'white',
+                letterSpacing: '-0.02em',
+                marginBottom: '16px',
+              }}
+            >
               Precios simples y transparentes
             </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.0625rem' }}>
               Empieza gratis y escala cuando estés listo
             </p>
           </div>
 
-          <div className="mx-auto mt-16 grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mx-auto grid max-w-6xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {planKeys.map((key) => {
               const plan = PLANS[key];
               const meta = planMeta[key];
               const isHighlighted = meta.highlighted;
+              const cardStyle = isHighlighted ? glassCardHighlighted : glassCard;
 
               return (
-                <Card
+                <div
                   key={key}
-                  className={`relative flex flex-col border-white/5 bg-card/50 ${
-                    isHighlighted
-                      ? 'ring-2 ring-purple-500/50 shadow-lg shadow-purple-500/10'
-                      : ''
-                  }`}
+                  style={{ ...cardStyle, position: 'relative', display: 'flex', flexDirection: 'column' }}
                 >
+                  {/* Badge */}
                   {meta.badge && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <Badge className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white">
-                        {meta.badge}
-                      </Badge>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: '-14px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        background: 'linear-gradient(135deg, #C77DFF 0%, #FF6FA3 100%)',
+                        color: 'white',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        padding: '4px 14px',
+                        borderRadius: '999px',
+                        whiteSpace: 'nowrap',
+                        letterSpacing: '0.03em',
+                      }}
+                    >
+                      {meta.badge}
                     </div>
                   )}
 
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg">{plan.nombre}</CardTitle>
-                    <div className="mt-2 flex items-baseline gap-1">
-                      <span className="text-4xl font-bold">
-                        {plan.precio_mensual === 0 ? 'Gratis' : `${plan.precio_mensual}\u20AC`}
-                      </span>
-                      {plan.precio_mensual > 0 && (
-                        <span className="text-sm text-muted-foreground">/mes</span>
-                      )}
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="flex flex-1 flex-col">
-                    <ul className="mb-6 flex-1 space-y-2.5">
-                      {plan.features.map((feature) => (
-                        <li key={feature} className="flex items-start gap-2 text-sm text-muted-foreground">
-                          <Check className="mt-0.5 h-4 w-4 shrink-0 text-purple-400" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <Link
-                      href="/register"
-                      className={`inline-flex w-full items-center justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                        isHighlighted
-                          ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:opacity-90 hover:shadow-lg hover:shadow-purple-600/25'
-                          : 'border border-white/10 text-muted-foreground hover:border-white/20 hover:text-foreground'
-                      }`}
+                  {/* Plan name */}
+                  <div style={{ marginBottom: '8px' }}>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-display, Syne, sans-serif)',
+                        fontWeight: 700,
+                        fontSize: '1.0625rem',
+                        color: 'white',
+                      }}
                     >
-                      Empezar gratis
-                    </Link>
-                  </CardContent>
-                </Card>
+                      {plan.nombre}
+                    </span>
+                  </div>
+
+                  {/* Price */}
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '20px' }}>
+                    <span
+                      style={{
+                        fontFamily: 'var(--font-display, Syne, sans-serif)',
+                        fontWeight: 800,
+                        fontSize: '2.5rem',
+                        color: 'white',
+                        lineHeight: 1,
+                      }}
+                    >
+                      {plan.precio_mensual === 0 ? 'Gratis' : `${plan.precio_mensual}€`}
+                    </span>
+                    {plan.precio_mensual > 0 && (
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.875rem' }}>/mes</span>
+                    )}
+                  </div>
+
+                  {/* Feature list */}
+                  <ul style={{ flex: 1, marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {plan.features.map((feature) => (
+                      <li
+                        key={feature}
+                        style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '0.875rem', color: 'rgba(255,255,255,0.7)' }}
+                      >
+                        <Check style={{ width: '14px', height: '14px', color: '#C77DFF', flexShrink: 0, marginTop: '3px' }} />
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* CTA */}
+                  <Link
+                    href="/register"
+                    style={
+                      isHighlighted
+                        ? {
+                            display: 'block',
+                            textAlign: 'center',
+                            background: 'linear-gradient(135deg, #C77DFF 0%, #FF6FA3 100%)',
+                            color: 'white',
+                            fontWeight: 600,
+                            fontSize: '0.9rem',
+                            padding: '10px 16px',
+                            borderRadius: '10px',
+                            boxShadow: '0 0 24px rgba(199,125,255,0.3)',
+                            transition: 'opacity 0.2s',
+                          }
+                        : {
+                            display: 'block',
+                            textAlign: 'center',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            color: 'rgba(255,255,255,0.7)',
+                            fontWeight: 500,
+                            fontSize: '0.9rem',
+                            padding: '10px 16px',
+                            borderRadius: '10px',
+                            transition: 'border-color 0.2s, color 0.2s',
+                          }
+                    }
+                    className="hover:opacity-90"
+                  >
+                    Empezar gratis
+                  </Link>
+                </div>
               );
             })}
           </div>
         </div>
       </section>
 
-      {/* Final CTA */}
+      {/* Final CTA section */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0">
-          <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-purple-600/15 blur-[120px]" />
+          <div
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+            style={{ width: '600px', height: '600px', background: 'rgba(199,125,255,0.12)', filter: 'blur(120px)' }}
+          />
         </div>
 
         <div className="relative mx-auto max-w-7xl px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
-          <div className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              ¿Listo para escalar tu agencia?
+          <div
+            className="mx-auto max-w-2xl text-center"
+            style={{
+              background: 'rgba(199,125,255,0.04)',
+              border: '1px solid rgba(199,125,255,0.18)',
+              borderRadius: '24px',
+              padding: 'clamp(40px, 6vw, 80px) clamp(24px, 4vw, 60px)',
+            }}
+          >
+            <h2
+              style={{
+                fontFamily: 'var(--font-display, Syne, sans-serif)',
+                fontWeight: 800,
+                fontSize: 'clamp(28px, 3.5vw, 48px)',
+                color: 'white',
+                letterSpacing: '-0.03em',
+                marginBottom: '16px',
+              }}
+            >
+              ¿Listo para{' '}
+              <span style={gradientTextStyle}>escalar tu agencia</span>?
             </h2>
-            <p className="mt-4 text-lg text-muted-foreground">
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '1.0625rem', marginBottom: '36px' }}>
               Empieza gratis. Sin tarjeta. Sin compromiso.
             </p>
-            <div className="mt-10">
-              <Link
-                href="/register"
-                className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-8 py-3.5 text-sm font-medium text-white transition-all hover:opacity-90 hover:shadow-lg hover:shadow-purple-600/25"
-              >
-                Empezar gratis
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </div>
+            <Link
+              href="/register"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'linear-gradient(135deg, #C77DFF 0%, #FF6FA3 100%)',
+                color: 'white',
+                fontWeight: 700,
+                fontSize: '1rem',
+                padding: '16px 36px',
+                borderRadius: '12px',
+                boxShadow: '0 0 40px rgba(199,125,255,0.4)',
+                transition: 'opacity 0.2s',
+              }}
+              className="hover:opacity-90"
+            >
+              Empezar gratis
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/5">
+      <footer style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6 lg:px-8">
-          <p className="text-sm text-muted-foreground">
+          <p style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.4)' }}>
             &copy; 2026 AI Agency OS by Simedalavida
           </p>
           <div className="flex gap-6">
-            <Link href="/legal/terminos" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            <Link
+              href="/legal/terminos"
+              style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.4)', transition: 'color 0.2s' }}
+              className="hover:text-white"
+            >
               Términos
             </Link>
-            <Link href="/legal/privacidad" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            <Link
+              href="/legal/privacidad"
+              style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.4)', transition: 'color 0.2s' }}
+              className="hover:text-white"
+            >
               Privacidad
             </Link>
-            <Link href="#" className="text-sm text-muted-foreground transition-colors hover:text-foreground">
+            <Link
+              href="#"
+              style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.4)', transition: 'color 0.2s' }}
+              className="hover:text-white"
+            >
               Contacto
             </Link>
           </div>
