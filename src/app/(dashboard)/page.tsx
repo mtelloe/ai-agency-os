@@ -8,7 +8,6 @@ import { ActivityFeed } from '@/components/dashboard/activity-feed';
 import { QuickActions } from '@/components/dashboard/quick-actions';
 import { MetricCardSkeleton } from '@/components/shared/loading-skeleton';
 import { UsageCard } from '@/components/dashboard/usage-card';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PIPELINE_STAGES } from '@/lib/constants';
 import { ClipboardList, Users, Sparkles, FileText, TrendingUp, CreditCard } from 'lucide-react';
 import {
@@ -23,14 +22,14 @@ import {
 
 // Colores hex para las etapas del pipeline
 const STAGE_COLORS: Record<string, string> = {
-  Nuevo: '#6b7280',
-  Auditado: '#3b82f6',
-  Contactado: '#eab308',
-  'Demo creada': '#a855f7',
-  'Propuesta enviada': '#6366f1',
-  'Follow-up': '#f97316',
-  Ganado: '#22c55e',
-  Perdido: '#ef4444',
+  Nuevo: 'rgba(255,255,255,0.2)',
+  Auditado: '#C77DFF',
+  Contactado: '#F5C547',
+  'Demo creada': '#FF6FA3',
+  'Propuesta enviada': 'rgba(199,125,255,0.6)',
+  'Follow-up': '#FF9F65',
+  Ganado: '#6EC5A8',
+  Perdido: 'rgba(255,100,100,0.6)',
 };
 
 function getWeekLabel(date: Date): string {
@@ -154,8 +153,15 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Vista general de tu agencia</p>
+        <h1 style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: '28px',
+          fontWeight: 800,
+          letterSpacing: '-0.03em',
+          color: '#fff',
+          marginBottom: '4px',
+        }}>Dashboard</h1>
+        <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '14px' }}>Vista general de tu agencia</p>
       </div>
 
       {isLoading ? (
@@ -175,14 +181,32 @@ export default function DashboardPage() {
 
       {/* Seccion de graficos */}
       <div>
-        <h2 className="text-lg font-semibold mb-4">Evolucion</h2>
+        <h2 style={{
+          fontFamily: 'var(--font-display)',
+          fontSize: '18px',
+          fontWeight: 700,
+          color: '#fff',
+          marginBottom: '16px',
+          letterSpacing: '-0.02em',
+        }}>Evolución</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Grafico 1: Auditorias por semana */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Auditorias por semana</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <div className="rounded-xl" style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+          }}>
+            <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <h3 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '14px',
+                fontWeight: 700,
+                color: '#fff',
+                letterSpacing: '-0.01em',
+              }}>Auditorias por semana</h3>
+            </div>
+            <div className="p-4">
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={auditoriasChartData || []}>
@@ -199,19 +223,30 @@ export default function DashboardPage() {
                       allowDecimals={false}
                     />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar dataKey="cantidad" name="auditorias" radius={[4, 4, 0, 0]} fill="#6366f1" />
+                    <Bar dataKey="cantidad" name="auditorias" radius={[4, 4, 0, 0]} fill="#C77DFF" />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Grafico 2: Pipeline (leads por etapa) */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Pipeline</CardTitle>
-            </CardHeader>
-            <CardContent>
+          <div className="rounded-xl" style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+          }}>
+            <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <h3 style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: '14px',
+                fontWeight: 700,
+                color: '#fff',
+                letterSpacing: '-0.01em',
+              }}>Pipeline</h3>
+            </div>
+            <div className="p-4">
               <div className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
@@ -243,14 +278,20 @@ export default function DashboardPage() {
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="space-y-6">
-          <h2 className="text-lg font-semibold">Acciones rapidas</h2>
+          <h2 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '18px',
+            fontWeight: 700,
+            color: '#fff',
+            letterSpacing: '-0.02em',
+          }}>Acciones rápidas</h2>
           <QuickActions />
         </div>
         <ActivityFeed />
