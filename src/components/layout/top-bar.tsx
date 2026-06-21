@@ -39,7 +39,15 @@ export function TopBar() {
     : '??';
 
   return (
-    <header className="h-14 border-b bg-card flex items-center justify-between px-4 md:px-6 shrink-0">
+    <header
+      className="h-14 flex items-center justify-between px-4 md:px-6 shrink-0"
+      style={{
+        background: 'rgba(8,6,15,0.75)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+      }}
+    >
       {/* Left side: hamburger on mobile */}
       <div className="flex items-center">
         <button
@@ -56,7 +64,12 @@ export function TopBar() {
         {/* Nueva auditoría: full on md+, icon-only on mobile */}
         <Link
           href="/analizador"
-          className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/80 transition-colors"
+          className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md text-sm font-medium transition-colors"
+          style={{
+            background: 'var(--gl-accent-grad)',
+            color: '#fff',
+            boxShadow: '0 0 16px rgba(199,125,255,0.25)',
+          }}
         >
           <Plus className="h-4 w-4" />
           <span className="hidden md:inline">Nueva auditoría</span>
@@ -87,9 +100,25 @@ export function TopBar() {
 
       {/* Mobile navigation sheet */}
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent side="left" className="w-72 p-0 flex flex-col">
-          <SheetHeader className="p-4 border-b">
-            <SheetTitle className="text-lg font-bold">AI Agency OS</SheetTitle>
+        <SheetContent side="left" className="w-72 p-0 flex flex-col" style={{
+          background: 'rgba(8,6,15,0.95)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderRight: '1px solid rgba(255,255,255,0.07)',
+        }}>
+          <SheetHeader className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+            <SheetTitle style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 800,
+              color: '#fff',
+            }}>
+              <span style={{
+                background: 'var(--gl-accent-grad)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}>AI</span> Agency OS
+            </SheetTitle>
           </SheetHeader>
 
           <nav className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -104,8 +133,8 @@ export function TopBar() {
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
                     isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      ? 'text-[#C77DFF] bg-[rgba(199,125,255,0.12)] border-l-2 border-[#C77DFF]'
+                      : 'text-[rgba(255,255,255,0.45)] border-l-2 border-transparent hover:bg-[rgba(255,255,255,0.05)] hover:text-white'
                   )}
                 >
                   <item.icon className="h-4 w-4" />
@@ -116,7 +145,7 @@ export function TopBar() {
 
             {isAdmin && (
               <>
-                <div className="my-2 border-t" />
+                <div className="my-2" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }} />
                 {ADMIN_ITEMS.map((item) => {
                   const isActive = pathname.startsWith(item.href);
                   return (
@@ -127,8 +156,8 @@ export function TopBar() {
                       className={cn(
                         'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
                         isActive
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                          ? 'text-[#C77DFF] bg-[rgba(199,125,255,0.12)] border-l-2 border-[#C77DFF]'
+                          : 'text-[rgba(255,255,255,0.45)] border-l-2 border-transparent hover:bg-[rgba(255,255,255,0.05)] hover:text-white'
                       )}
                     >
                       <item.icon className="h-4 w-4" />
@@ -140,7 +169,7 @@ export function TopBar() {
             )}
           </nav>
 
-          <SheetFooter className="p-3 border-t">
+          <SheetFooter className="p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
             <CreditsBadge />
           </SheetFooter>
         </SheetContent>

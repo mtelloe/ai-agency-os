@@ -42,11 +42,35 @@ export function Sidebar() {
   const isAdmin = user?.rol === 'owner' || user?.rol === 'admin';
 
   return (
-    <aside className="hidden md:flex flex-col h-screen w-64 border-r bg-card shrink-0">
-      <div className="p-4 border-b">
+    <aside
+      className="hidden md:flex flex-col h-screen w-64 shrink-0"
+      style={{
+        background: 'rgba(8,6,15,0.85)',
+        borderRight: '1px solid rgba(255,255,255,0.07)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        position: 'sticky',
+        top: 0,
+      }}
+    >
+      <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
         <div className="flex items-center gap-2">
           <img src="/icon.svg" alt="AI Agency OS" className="h-6 w-6" />
-          <h1 className="text-lg font-bold">AI Agency OS</h1>
+          <h1 style={{
+            fontFamily: 'var(--font-display)',
+            fontSize: '16px',
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+            color: '#fff',
+            margin: 0,
+          }}>
+            <span style={{
+              background: 'var(--gl-accent-grad)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}>AI</span> Agency OS
+          </h1>
         </div>
       </div>
 
@@ -61,8 +85,8 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  ? 'text-[#C77DFF] bg-[rgba(199,125,255,0.12)] border-l-2 border-[#C77DFF]'
+                  : 'text-[rgba(255,255,255,0.45)] border-l-2 border-transparent hover:bg-[rgba(255,255,255,0.05)] hover:text-white'
               )}
             >
               <item.icon className="h-4 w-4" />
@@ -73,7 +97,7 @@ export function Sidebar() {
 
         {isAdmin && (
           <>
-            <div className="my-2 border-t" />
+            <div className="my-2" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }} />
             {ADMIN_ITEMS.map((item) => {
               const isActive = pathname.startsWith(item.href);
               return (
@@ -83,8 +107,8 @@ export function Sidebar() {
                   className={cn(
                     'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
                     isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                      ? 'text-[#C77DFF] bg-[rgba(199,125,255,0.12)] border-l-2 border-[#C77DFF]'
+                      : 'text-[rgba(255,255,255,0.45)] border-l-2 border-transparent hover:bg-[rgba(255,255,255,0.05)] hover:text-white'
                   )}
                 >
                   <item.icon className="h-4 w-4" />
@@ -96,7 +120,7 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="p-3 border-t">
+      <div className="p-3" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
         <CreditsBadge />
       </div>
     </aside>
