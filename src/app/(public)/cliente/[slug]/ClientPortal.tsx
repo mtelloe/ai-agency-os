@@ -294,7 +294,8 @@ export default function ClientPortal({ empresa, slug, isUnlocked }: Props) {
             <p className="font-semibold" style={{ color: '#3730a3' }}>¿Tienes alguna pregunta?</p>
             <p className="text-sm mt-0.5" style={{ color: '#6366f1' }}>Estamos disponibles para ti</p>
           </div>
-          <a href="mailto:info@simedalavida.com"
+          <a href="https://wa.me/34682355001"
+            target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-70"
             style={{ color: '#4f46e5' }}>
             Escríbenos <ChevronRight className="h-4 w-4" />
