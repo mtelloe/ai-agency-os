@@ -30,17 +30,17 @@ function KpiCard({
   color: string;
 }) {
   return (
-    <Card className="border-0 shadow-sm" style={{ background: '#fff9f0' }}>
+    <Card className="glass border-0">
       <CardContent className="p-4 flex items-start gap-3">
         <div
           className="rounded-lg p-2 shrink-0"
-          style={{ background: color + '33' }}
+          style={{ background: 'rgba(199,125,255,0.12)' }}
         >
-          <Icon className="h-5 w-5" style={{ color }} />
+          <Icon className="h-5 w-5" style={{ color: 'var(--gl-accent)' }} />
         </div>
         <div className="min-w-0">
           <p className="text-xs text-muted-foreground truncate">{title}</p>
-          <p className="text-2xl font-bold leading-tight">{main}</p>
+          <p className="text-2xl font-bold leading-tight" style={{ fontFamily: 'var(--font-display)' }}>{main}</p>
           <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>
         </div>
       </CardContent>

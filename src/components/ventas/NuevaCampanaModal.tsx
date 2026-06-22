@@ -267,10 +267,7 @@ export function NuevaCampanaModal({ open, onClose, workspaceId }: Props) {
                 {previewOpen ? 'Ocultar preview' : 'Ver preview'}
               </button>
               {previewOpen && (
-                <div
-                  className="rounded-lg border p-3 text-xs space-y-1"
-                  style={{ background: '#fff9f0' }}
-                >
+                <div className="glass rounded-lg p-3 text-xs space-y-1">
                   <p className="font-medium">{preview.s || '(sin asunto)'}</p>
                   <p className="text-muted-foreground whitespace-pre-wrap">
                     {preview.b || '(sin cuerpo)'}
@@ -289,7 +286,7 @@ export function NuevaCampanaModal({ open, onClose, workspaceId }: Props) {
             size="sm"
             onClick={handleLaunch}
             disabled={launching}
-            style={{ background: '#8ac47a', color: '#fff' }}
+            className="btn-gradient"
           >
             {launching ? 'Lanzando...' : '▶ Lanzar campaña'}
           </Button>

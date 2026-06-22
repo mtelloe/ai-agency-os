@@ -77,7 +77,7 @@ export function VentasActivityFeed({ workspaceId }: { workspaceId: string }) {
   });
 
   return (
-    <Card className="border-0 shadow-sm flex flex-col" style={{ background: '#fff9f0' }}>
+    <Card className="glass border-0 flex flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-semibold">Actividad reciente</CardTitle>
       </CardHeader>

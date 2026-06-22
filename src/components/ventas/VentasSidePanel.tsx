@@ -69,7 +69,7 @@ export function VentasSidePanel({ workspaceId, onEditTemplate }: Props) {
   return (
     <div className="space-y-4">
       {/* Agents */}
-      <Card className="border-0 shadow-sm" style={{ background: '#fff9f0' }}>
+      <Card className="glass border-0">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold">Agentes</CardTitle>
         </CardHeader>
@@ -94,8 +94,8 @@ export function VentasSidePanel({ workspaceId, onEditTemplate }: Props) {
                   className="text-xs shrink-0"
                   style={
                     a.status === 'active'
-                      ? { borderColor: '#8ac47a', color: '#5a8c4a' }
-                      : { borderColor: '#f4a7b9', color: '#b04060' }
+                      ? { borderColor: 'var(--gl-success)', color: 'var(--gl-success)' }
+                      : { borderColor: 'rgba(255,100,100,0.5)', color: 'rgba(255,100,100,0.85)' }
                   }
                 >
                   {a.status === 'active' ? 'activo' : 'pausado'}
@@ -123,7 +123,7 @@ export function VentasSidePanel({ workspaceId, onEditTemplate }: Props) {
       </Card>
 
       {/* Templates */}
-      <Card className="border-0 shadow-sm" style={{ background: '#fff9f0' }}>
+      <Card className="glass border-0">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold">Templates activos</CardTitle>
         </CardHeader>

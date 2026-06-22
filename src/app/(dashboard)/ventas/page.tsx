@@ -48,7 +48,7 @@ export default function VentasPage() {
         <Button
           size="sm"
           onClick={() => setCampanaOpen(true)}
-          style={{ background: '#8ac47a', color: '#fff' }}
+          className="btn-gradient"
         >
           <Play className="h-4 w-4 mr-1" />
           Nueva campaña

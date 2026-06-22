@@ -199,6 +199,18 @@
   filter: brightness(1.05);
 }
 
+/* ── Dashboard typography ── */
+.dashboard-content h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.dashboard-content h2.section-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
 @media (max-width: 768px) {
   body {
     background-attachment: scroll;
