@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, Clock, Circle, FileText, Download, Lock, ChevronRight } from 'lucide-react';
+import { CheckCircle2, FileText, Download, Lock, ChevronRight } from 'lucide-react';
 
 type Fase = {
   nombre: string;
@@ -41,14 +41,12 @@ export default function ClientPortal({ empresa, slug, isUnlocked }: Props) {
     if (!pin.trim() || loading) return;
     setLoading(true);
     setError('');
-
     try {
       const res = await fetch(`/api/portal/${slug}/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pin }),
       });
-
       if (res.ok) {
         window.location.reload();
       } else {
@@ -64,17 +62,15 @@ export default function ClientPortal({ empresa, slug, isUnlocked }: Props) {
 
   if (!isUnlocked) {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center bg-[#0a0a0a] px-4"
-        style={{ backgroundImage: 'radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.1) 0%, transparent 65%)' }}
-      >
+      <div className="min-h-screen flex items-center justify-center px-4" style={{ background: '#f2f2f5' }}>
         <div className="w-full max-w-sm">
           <div className="text-center mb-10">
-            <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl bg-indigo-600/15 ring-1 ring-indigo-500/30 mb-6">
-              <Lock className="h-6 w-6 text-indigo-400" />
+            <div className="inline-flex items-center justify-center h-14 w-14 rounded-2xl mb-6"
+              style={{ background: '#eef2ff', border: '1px solid #c7d2fe' }}>
+              <Lock className="h-6 w-6" style={{ color: '#4f46e5' }} />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-1">{empresa.nombre}</h1>
-            <p className="text-zinc-500 text-sm">Portal de cliente · Simedalavida</p>
+            <h1 className="text-2xl font-bold mb-1" style={{ color: '#111118' }}>{empresa.nombre}</h1>
+            <p className="text-sm" style={{ color: '#9ca3af' }}>Portal de cliente · Simedalavida</p>
           </div>
 
           <div className="space-y-3">
@@ -85,23 +81,27 @@ export default function ClientPortal({ empresa, slug, isUnlocked }: Props) {
               onChange={e => setPin(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleUnlock()}
               autoFocus
-              className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 text-center text-white text-lg tracking-[0.5em] placeholder:text-zinc-600 placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 transition-all"
+              className="w-full rounded-xl px-4 py-3.5 text-center text-lg tracking-[0.5em] placeholder:tracking-normal focus:outline-none focus:ring-2 transition-all"
+              style={{
+                background: '#ffffff',
+                border: '1px solid #e4e4e8',
+                color: '#111118',
+              }}
             />
-            {error && (
-              <p className="text-center text-sm text-red-400">{error}</p>
-            )}
+            {error && <p className="text-center text-sm text-red-500">{error}</p>}
             <button
               onClick={handleUnlock}
               disabled={loading || !pin.trim()}
-              className="w-full rounded-xl bg-indigo-600 py-3.5 font-semibold text-white hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              className="w-full rounded-xl py-3.5 font-semibold text-white transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              style={{ background: '#4f46e5' }}
             >
               {loading ? 'Verificando…' : 'Acceder'}
             </button>
           </div>
 
-          <p className="text-center text-xs text-zinc-600 mt-8">
+          <p className="text-center text-xs mt-8" style={{ color: '#9ca3af' }}>
             ¿No tienes PIN?{' '}
-            <a href="mailto:info@simedalavida.com" className="text-zinc-400 hover:text-white transition-colors">
+            <a href="mailto:info@simedalavida.com" className="hover:underline" style={{ color: '#6b7280' }}>
               Escríbenos
             </a>
           </p>
@@ -117,45 +117,45 @@ export default function ClientPortal({ empresa, slug, isUnlocked }: Props) {
   const faseActiva = fases.find(f => f.estado === 'en_curso');
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white">
+    <div className="min-h-screen" style={{ background: '#f2f2f5' }}>
       {/* Header */}
-      <div className="border-b border-white/8 sticky top-0 z-10 bg-[#0a0a0a]/80 backdrop-blur-sm">
+      <div className="sticky top-0 z-10 backdrop-blur-sm" style={{ background: 'rgba(242,242,245,0.85)', borderBottom: '1px solid #e4e4e8' }}>
         <div className="max-w-2xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="text-xs font-medium text-zinc-400">Simedalavida</span>
-          <span className="text-xs text-zinc-600">{empresa.nombre}</span>
+          <span className="text-xs font-semibold tracking-wide" style={{ color: '#6b7280' }}>Simedalavida</span>
+          <span className="text-xs" style={{ color: '#9ca3af' }}>{empresa.nombre}</span>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto px-6 py-12 space-y-12">
+      <div className="max-w-2xl mx-auto px-6 py-12 space-y-8">
 
         {/* Hero */}
-        <div className="space-y-6">
+        <div className="space-y-5">
           <div>
-            <p className="text-xs uppercase tracking-widest font-medium text-indigo-400 mb-3">
+            <p className="text-xs uppercase tracking-widest font-semibold mb-2" style={{ color: '#6366f1' }}>
               Tu proyecto
             </p>
-            <h1 className="text-3xl font-bold leading-tight">{empresa.nombre}</h1>
+            <h1 className="text-3xl font-bold" style={{ color: '#111118' }}>{empresa.nombre}</h1>
             {faseActiva && (
-              <p className="text-zinc-400 text-sm mt-2 flex items-center gap-2">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+              <p className="text-sm mt-2 flex items-center gap-2" style={{ color: '#6b7280' }}>
+                <span className="inline-block h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: '#6366f1' }} />
                 Ahora: {faseActiva.nombre}
               </p>
             )}
           </div>
 
           {fases.length > 0 && (
-            <div className="rounded-2xl border border-white/8 bg-white/3 p-5 space-y-3">
+            <div className="rounded-2xl p-5 space-y-3" style={{ background: '#ffffff', border: '1px solid #e4e4e8', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
               <div className="flex items-center justify-between text-sm">
-                <span className="text-zinc-400">
-                  <span className="text-white font-semibold text-base">{completadas}</span>
-                  <span className="text-zinc-500"> / {fases.length} entregas completadas</span>
+                <span style={{ color: '#6b7280' }}>
+                  <span className="font-bold text-base" style={{ color: '#111118' }}>{completadas}</span>
+                  <span> / {fases.length} entregas completadas</span>
                 </span>
-                <span className="text-zinc-300 font-bold text-lg">{progreso}%</span>
+                <span className="font-bold text-lg" style={{ color: '#111118' }}>{progreso}%</span>
               </div>
-              <div className="h-2 rounded-full bg-white/8 overflow-hidden">
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: '#e9e9ed' }}>
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-indigo-600 to-indigo-400 transition-all duration-700"
-                  style={{ width: `${progreso}%` }}
+                  className="h-full rounded-full transition-all duration-700"
+                  style={{ width: `${progreso}%`, background: 'linear-gradient(90deg, #6366f1, #818cf8)' }}
                 />
               </div>
             </div>
@@ -164,14 +164,13 @@ export default function ClientPortal({ empresa, slug, isUnlocked }: Props) {
 
         {/* Timeline */}
         {fases.length > 0 && (
-          <section className="space-y-5">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+          <section className="space-y-4">
+            <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#9ca3af' }}>
               Estado del proyecto
             </h2>
 
             <div className="relative">
-              {/* Vertical connecting line */}
-              <div className="absolute left-[15px] top-4 bottom-4 w-px bg-gradient-to-b from-white/15 via-white/8 to-transparent" />
+              <div className="absolute left-[15px] top-4 bottom-4 w-px" style={{ background: 'linear-gradient(to bottom, #d1d5db, #e9e9ed, transparent)' }} />
 
               <div className="space-y-2">
                 {fases.map((fase, i) => {
@@ -180,54 +179,53 @@ export default function ClientPortal({ empresa, slug, isUnlocked }: Props) {
 
                   return (
                     <div key={i} className="relative flex gap-5">
-                      {/* Status dot */}
+                      {/* Dot */}
                       <div className="relative z-10 shrink-0 mt-0.5">
                         {isCompletado && (
-                          <div className="h-8 w-8 rounded-full bg-emerald-500/15 ring-1 ring-emerald-500/40 flex items-center justify-center">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                          <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ background: '#ecfdf5', border: '1px solid #a7f3d0' }}>
+                            <CheckCircle2 className="h-4 w-4" style={{ color: '#10b981' }} />
                           </div>
                         )}
                         {isEnCurso && (
-                          <div className="h-8 w-8 rounded-full bg-indigo-500/20 ring-2 ring-indigo-500/60 flex items-center justify-center">
-                            <span className="h-2.5 w-2.5 rounded-full bg-indigo-400 animate-pulse block" />
+                          <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ background: '#eef2ff', border: '2px solid #a5b4fc' }}>
+                            <span className="h-2.5 w-2.5 rounded-full animate-pulse block" style={{ background: '#6366f1' }} />
                           </div>
                         )}
                         {fase.estado === 'pendiente' && (
-                          <div className="h-8 w-8 rounded-full bg-white/3 ring-1 ring-white/10 flex items-center justify-center">
-                            <span className="h-2 w-2 rounded-full bg-zinc-700 block" />
+                          <div className="h-8 w-8 rounded-full flex items-center justify-center" style={{ background: '#f3f4f6', border: '1px solid #e5e7eb' }}>
+                            <span className="h-2 w-2 rounded-full block" style={{ background: '#d1d5db' }} />
                           </div>
                         )}
                       </div>
 
-                      {/* Content card */}
-                      <div className={`flex-1 min-w-0 rounded-xl px-4 py-3 mb-2 ${
+                      {/* Card */}
+                      <div className={`flex-1 min-w-0 rounded-xl px-4 py-3 mb-2`} style={
                         isEnCurso
-                          ? 'bg-indigo-500/8 ring-1 ring-indigo-500/25'
+                          ? { background: '#eef2ff', border: '1px solid #c7d2fe', boxShadow: '0 1px 4px rgba(99,102,241,0.1)' }
                           : isCompletado
-                          ? 'bg-white/3 ring-1 ring-white/6'
-                          : 'bg-transparent'
-                      }`}>
+                          ? { background: '#ffffff', border: '1px solid #e4e4e8', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }
+                          : { background: 'transparent' }
+                      }>
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2 min-w-0">
-                            <p className={`font-medium leading-snug ${
-                              isCompletado ? 'text-white' :
-                              isEnCurso ? 'text-white' :
-                              'text-zinc-600'
-                            }`}>
+                            <p className="font-medium leading-snug" style={{
+                              color: isCompletado ? '#111118' : isEnCurso ? '#3730a3' : '#9ca3af'
+                            }}>
                               {fase.nombre}
                             </p>
                             {isEnCurso && (
-                              <span className="text-xs text-indigo-400 font-medium shrink-0 bg-indigo-500/15 px-2 py-0.5 rounded-full">
+                              <span className="text-xs font-medium px-2 py-0.5 rounded-full shrink-0"
+                                style={{ background: '#e0e7ff', color: '#4338ca' }}>
                                 En curso
                               </span>
                             )}
                           </div>
                           {fase.fecha && (
-                            <span className="text-xs text-zinc-600 shrink-0">{fase.fecha}</span>
+                            <span className="text-xs shrink-0" style={{ color: '#9ca3af' }}>{fase.fecha}</span>
                           )}
                         </div>
                         {fase.descripcion && (
-                          <p className="text-sm text-zinc-500 mt-1">{fase.descripcion}</p>
+                          <p className="text-sm mt-1" style={{ color: '#6b7280' }}>{fase.descripcion}</p>
                         )}
                       </div>
                     </div>
@@ -238,37 +236,33 @@ export default function ClientPortal({ empresa, slug, isUnlocked }: Props) {
           </section>
         )}
 
-        {/* Invoices */}
+        {/* Facturas */}
         {facturas.length > 0 && (
           <section className="space-y-4">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+            <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#9ca3af' }}>
               Facturas
             </h2>
-            <div className="rounded-2xl border border-white/8 overflow-hidden divide-y divide-white/6">
+            <div className="rounded-2xl overflow-hidden" style={{ background: '#ffffff', border: '1px solid #e4e4e8', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
               {facturas.map((fra, i) => (
-                <div key={i} className="flex items-center gap-4 px-5 py-4 bg-white/2 hover:bg-white/4 transition-colors">
-                  <FileText className="h-4 w-4 text-zinc-600 shrink-0" />
+                <div key={i} className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-gray-50"
+                  style={{ borderBottom: i < facturas.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
+                  <FileText className="h-4 w-4 shrink-0" style={{ color: '#d1d5db' }} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{fra.concepto}</p>
-                    <p className="text-xs text-zinc-600 mt-0.5">{fra.numero} · {fra.fecha}</p>
+                    <p className="text-sm font-medium truncate" style={{ color: '#111118' }}>{fra.concepto}</p>
+                    <p className="text-xs mt-0.5" style={{ color: '#9ca3af' }}>{fra.numero} · {fra.fecha}</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-sm font-semibold">{fra.importe}</span>
-                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                    <span className="text-sm font-semibold" style={{ color: '#111118' }}>{fra.importe}</span>
+                    <span className="text-xs px-2.5 py-0.5 rounded-full font-medium" style={
                       fra.estado === 'pagada'
-                        ? 'bg-emerald-500/12 text-emerald-400 ring-1 ring-emerald-500/20'
-                        : 'bg-amber-500/12 text-amber-400 ring-1 ring-amber-500/20'
-                    }`}>
+                        ? { background: '#ecfdf5', color: '#059669', border: '1px solid #a7f3d0' }
+                        : { background: '#fffbeb', color: '#d97706', border: '1px solid #fcd34d' }
+                    }>
                       {fra.estado === 'pagada' ? 'Pagada' : 'Pendiente'}
                     </span>
                     {fra.url && (
-                      <a
-                        href={fra.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-zinc-500 hover:text-white transition-colors"
-                        title="Descargar factura"
-                      >
+                      <a href={fra.url} target="_blank" rel="noopener noreferrer"
+                        className="transition-colors hover:opacity-70" style={{ color: '#9ca3af' }} title="Descargar">
                         <Download className="h-4 w-4" />
                       </a>
                     )}
@@ -279,14 +273,14 @@ export default function ClientPortal({ empresa, slug, isUnlocked }: Props) {
           </section>
         )}
 
-        {/* Notes */}
+        {/* Nota pública */}
         {empresa.portal_notas && (
           <section className="space-y-3">
-            <h2 className="text-xs font-semibold uppercase tracking-widest text-zinc-500">
+            <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#9ca3af' }}>
               Notas del proyecto
             </h2>
-            <div className="rounded-2xl border border-white/8 bg-white/3 p-5">
-              <p className="text-sm text-zinc-300 whitespace-pre-line leading-relaxed">
+            <div className="rounded-2xl p-5" style={{ background: '#ffffff', border: '1px solid #e4e4e8', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <p className="text-sm leading-relaxed whitespace-pre-line" style={{ color: '#374151' }}>
                 {empresa.portal_notas}
               </p>
             </div>
@@ -294,18 +288,15 @@ export default function ClientPortal({ empresa, slug, isUnlocked }: Props) {
         )}
 
         {/* Contact CTA */}
-        <div
-          className="rounded-2xl p-6 flex items-center justify-between"
-          style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.12) 0%, rgba(99,102,241,0.04) 100%)', border: '1px solid rgba(99,102,241,0.2)' }}
-        >
+        <div className="rounded-2xl p-6 flex items-center justify-between"
+          style={{ background: '#eef2ff', border: '1px solid #c7d2fe' }}>
           <div>
-            <p className="font-semibold text-white">¿Tienes alguna pregunta?</p>
-            <p className="text-sm text-zinc-400 mt-0.5">Estamos disponibles para ti</p>
+            <p className="font-semibold" style={{ color: '#3730a3' }}>¿Tienes alguna pregunta?</p>
+            <p className="text-sm mt-0.5" style={{ color: '#6366f1' }}>Estamos disponibles para ti</p>
           </div>
-          <a
-            href="mailto:info@simedalavida.com"
-            className="flex items-center gap-1.5 text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
-          >
+          <a href="mailto:info@simedalavida.com"
+            className="flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-70"
+            style={{ color: '#4f46e5' }}>
             Escríbenos <ChevronRight className="h-4 w-4" />
           </a>
         </div>
