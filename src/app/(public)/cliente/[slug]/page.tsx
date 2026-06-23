@@ -33,7 +33,7 @@ export default async function ClientePortalPage({
 
   const { data: empresa } = await supabase
     .from('empresas')
-    .select('nombre, portal_fases, portal_facturas, portal_notas, email, telefono')
+    .select('nombre, portal_fases, portal_facturas, portal_notas, portal_inversion, email, telefono')
     .eq('portal_slug', slug)
     .single();
 

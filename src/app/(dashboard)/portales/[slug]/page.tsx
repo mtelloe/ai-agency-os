@@ -12,7 +12,7 @@ export default async function EditPortalPage({
 
   const { data: empresa } = await supabase
     .from('empresas')
-    .select('id, nombre, portal_slug, portal_pin, portal_fases, portal_facturas, portal_notas, portal_notas_admin')
+    .select('id, nombre, portal_slug, portal_pin, portal_fases, portal_facturas, portal_notas, portal_notas_admin, portal_inversion')
     .eq('portal_slug', slug)
     .single();
 

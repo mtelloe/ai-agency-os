@@ -1,0 +1,2 @@
+ALTER TABLE empresas
+  ADD COLUMN IF NOT EXISTS portal_inversion JSONB DEFAULT NULL;

@@ -21,6 +21,7 @@ export async function PATCH(
       portal_facturas: body.portal_facturas,
       portal_notas: body.portal_notas,
       portal_notas_admin: body.portal_notas_admin,
+      portal_inversion: body.portal_inversion ?? null,
     })
     .eq('portal_slug', slug);
 

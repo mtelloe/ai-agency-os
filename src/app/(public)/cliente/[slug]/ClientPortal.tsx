@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckCircle2, FileText, Download, Lock, ChevronRight } from 'lucide-react';
+import { CheckCircle2, FileText, Download, Lock, ChevronRight, TrendingUp } from 'lucide-react';
 
 type Fase = {
   nombre: string;
@@ -19,12 +19,21 @@ type Factura = {
   url?: string;
 };
 
+type Inversion = {
+  setup_fee?: number;
+  mrr?: number;
+  inicio?: string;
+  descripcion_setup?: string;
+  descripcion_mrr?: string;
+};
+
 type Props = {
   empresa: {
     nombre: string;
     portal_fases?: Fase[];
     portal_facturas?: Factura[];
     portal_notas?: string | null;
+    portal_inversion?: Inversion | null;
     email?: string | null;
     telefono?: string | null;
   };
@@ -231,6 +240,57 @@ export default function ClientPortal({ empresa, slug, isUnlocked }: Props) {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Inversión */}
+        {empresa.portal_inversion && (empresa.portal_inversion.setup_fee || empresa.portal_inversion.mrr) && (
+          <section className="space-y-4">
+            <h2 className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#9ca3af' }}>
+              Tu inversión
+            </h2>
+            <div className="rounded-2xl p-5 space-y-4" style={{ background: '#ffffff', border: '1px solid #e4e4e8', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
+              <div className="flex items-center gap-3 mb-1">
+                <div className="h-8 w-8 rounded-xl flex items-center justify-center shrink-0" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+                  <TrendingUp className="h-4 w-4" style={{ color: '#16a34a' }} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold" style={{ color: '#111118' }}>Resumen económico</p>
+                  {empresa.portal_inversion.inicio && (
+                    <p className="text-xs" style={{ color: '#9ca3af' }}>Desde {empresa.portal_inversion.inicio}</p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {empresa.portal_inversion.setup_fee != null && (
+                  <div className="rounded-xl p-4" style={{ background: '#f9fafb', border: '1px solid #f3f4f6' }}>
+                    <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: '#9ca3af' }}>Setup inicial</p>
+                    <p className="text-2xl font-bold" style={{ color: '#111118' }}>
+                      {empresa.portal_inversion.setup_fee.toLocaleString('es-ES')} €
+                    </p>
+                    {empresa.portal_inversion.descripcion_setup && (
+                      <p className="text-xs mt-1.5 leading-snug" style={{ color: '#6b7280' }}>
+                        {empresa.portal_inversion.descripcion_setup}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {empresa.portal_inversion.mrr != null && (
+                  <div className="rounded-xl p-4" style={{ background: '#f9fafb', border: '1px solid #f3f4f6' }}>
+                    <p className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: '#9ca3af' }}>Cuota mensual</p>
+                    <p className="text-2xl font-bold" style={{ color: '#111118' }}>
+                      {empresa.portal_inversion.mrr.toLocaleString('es-ES')} €
+                      <span className="text-sm font-normal ml-1" style={{ color: '#9ca3af' }}>/mes</span>
+                    </p>
+                    {empresa.portal_inversion.descripcion_mrr && (
+                      <p className="text-xs mt-1.5 leading-snug" style={{ color: '#6b7280' }}>
+                        {empresa.portal_inversion.descripcion_mrr}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </section>

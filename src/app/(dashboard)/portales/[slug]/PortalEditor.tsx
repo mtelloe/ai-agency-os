@@ -20,6 +20,14 @@ type Factura = {
   url?: string;
 };
 
+type Inversion = {
+  setup_fee?: number | null;
+  mrr?: number | null;
+  inicio?: string;
+  descripcion_setup?: string;
+  descripcion_mrr?: string;
+};
+
 type Empresa = {
   id: string;
   nombre: string;
@@ -29,6 +37,7 @@ type Empresa = {
   portal_facturas: Factura[];
   portal_notas: string | null;
   portal_notas_admin: string | null;
+  portal_inversion: Inversion | null;
 };
 
 export default function PortalEditor({ empresa }: { empresa: Empresa }) {
@@ -37,6 +46,7 @@ export default function PortalEditor({ empresa }: { empresa: Empresa }) {
   const [pin, setPin] = useState(empresa.portal_pin || '');
   const [notasPublicas, setNotasPublicas] = useState(empresa.portal_notas || '');
   const [notasAdmin, setNotasAdmin] = useState(empresa.portal_notas_admin || '');
+  const [inversion, setInversion] = useState<Inversion>(empresa.portal_inversion || {});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -44,6 +54,9 @@ export default function PortalEditor({ empresa }: { empresa: Empresa }) {
     setSaving(true);
     setSaved(false);
     try {
+      const inversionPayload = (inversion.setup_fee != null || inversion.mrr != null)
+        ? inversion
+        : null;
       const res = await fetch(`/api/portal/${empresa.portal_slug}/admin`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -53,6 +66,7 @@ export default function PortalEditor({ empresa }: { empresa: Empresa }) {
           portal_facturas: facturas,
           portal_notas: notasPublicas,
           portal_notas_admin: notasAdmin,
+          portal_inversion: inversionPayload,
         }),
       });
       if (res.ok) setSaved(true);
@@ -306,6 +320,60 @@ export default function PortalEditor({ empresa }: { empresa: Empresa }) {
               Sin facturas todavía.
             </p>
           )}
+        </div>
+      </section>
+
+      {/* Inversión */}
+      <section className="rounded-xl border p-5 space-y-4">
+        <h2 className="font-semibold text-sm">Resumen de inversión</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground">Setup fee (€, sin IVA)</label>
+            <input
+              type="number"
+              value={inversion.setup_fee ?? ''}
+              onChange={e => setInversion(prev => ({ ...prev, setup_fee: e.target.value ? Number(e.target.value) : null }))}
+              placeholder="1600"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground">Cuota mensual / MRR (€)</label>
+            <input
+              type="number"
+              value={inversion.mrr ?? ''}
+              onChange={e => setInversion(prev => ({ ...prev, mrr: e.target.value ? Number(e.target.value) : null }))}
+              placeholder="150"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground">Fecha de inicio (visible al cliente)</label>
+            <input
+              value={inversion.inicio || ''}
+              onChange={e => setInversion(prev => ({ ...prev, inicio: e.target.value }))}
+              placeholder="Jun 2026"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs text-muted-foreground">Descripción setup (opcional)</label>
+            <input
+              value={inversion.descripcion_setup || ''}
+              onChange={e => setInversion(prev => ({ ...prev, descripcion_setup: e.target.value }))}
+              placeholder="Configuración inicial + agentes IA"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+          <div className="col-span-2 space-y-1.5">
+            <label className="text-xs text-muted-foreground">Descripción cuota mensual (opcional)</label>
+            <input
+              value={inversion.descripcion_mrr || ''}
+              onChange={e => setInversion(prev => ({ ...prev, descripcion_mrr: e.target.value }))}
+              placeholder="Mantenimiento, mejoras y soporte continuo"
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
         </div>
       </section>
 
