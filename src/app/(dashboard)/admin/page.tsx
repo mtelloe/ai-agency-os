@@ -58,6 +58,11 @@ import {
   RefreshCw,
   Circle,
   Power,
+  Briefcase,
+  Plus,
+  Euro,
+  Calendar,
+  Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuthFetch } from '@/hooks/use-auth-fetch';
@@ -734,6 +739,342 @@ function TabN8n() {
   );
 }
 
+// ──────────────────────────── Tab: Clientes Onboarding ────────────────────────────
+
+interface ClienteOnboarding {
+  id: string;
+  nombre_cliente: string;
+  email_cliente: string;
+  agentes: string | null;
+  fecha_inicio: string | null;
+  estado: string;
+  setup_fee: number;
+  mrr: number;
+  notas: string | null;
+  created_at: string;
+}
+
+const ESTADOS: Record<string, { label: string; className: string }> = {
+  Configurando: { label: 'Configurando', className: 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20' },
+  Activo: { label: 'Activo', className: 'bg-green-500/10 text-green-600 border-green-500/20' },
+  Pausado: { label: 'Pausado', className: 'bg-red-500/10 text-red-600 border-red-500/20' },
+};
+
+function TabClientes() {
+  const queryClient = useQueryClient();
+  const { authFetch } = useAuthFetch();
+  const [open, setOpen] = useState(false);
+  const [editCliente, setEditCliente] = useState<ClienteOnboarding | null>(null);
+  const [form, setForm] = useState({
+    nombre_cliente: '',
+    email_cliente: '',
+    fecha_inicio: new Date().toISOString().split('T')[0],
+    agentes: '',
+    notas: '',
+    setup_fee: '1600',
+    mrr: '150',
+  });
+
+  const { data: clientes, isLoading, error } = useQuery<ClienteOnboarding[]>({
+    queryKey: ['onboarding-clientes'],
+    queryFn: async () => {
+      const res = await authFetch('/api/onboarding/clientes');
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Error al cargar clientes');
+      }
+      return res.json();
+    },
+  });
+
+  const createCliente = useMutation({
+    mutationFn: async (data: typeof form) => {
+      const res = await authFetch('/api/onboarding/clientes', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...data,
+          setup_fee: Number(data.setup_fee),
+          mrr: Number(data.mrr),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Error al crear cliente');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['onboarding-clientes'] });
+      toast.success('Cliente creado y email de bienvenida enviado');
+      setOpen(false);
+      setForm({
+        nombre_cliente: '',
+        email_cliente: '',
+        fecha_inicio: new Date().toISOString().split('T')[0],
+        agentes: '',
+        notas: '',
+        setup_fee: '1600',
+        mrr: '150',
+      });
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const updateEstado = useMutation({
+    mutationFn: async ({ id, estado }: { id: string; estado: string }) => {
+      const res = await authFetch('/api/onboarding/clientes', {
+        method: 'PATCH',
+        body: JSON.stringify({ id, estado }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || 'Error al actualizar');
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['onboarding-clientes'] });
+      toast.success('Estado actualizado');
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const totalMrr = clientes?.filter((c) => c.estado === 'Activo').reduce((sum, c) => sum + (c.mrr ?? 0), 0) ?? 0;
+  const activos = clientes?.filter((c) => c.estado === 'Activo').length ?? 0;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-20 w-full" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (error) {
+    const msg = error instanceof Error ? error.message : 'Error desconocido';
+    const needsKey = msg.includes('SERVICE_ROLE_KEY');
+    return (
+      <Card className="border-destructive/50">
+        <CardContent className="py-10 text-center">
+          <AlertTriangle className="mx-auto mb-3 size-8 text-destructive" />
+          <p className="text-sm font-medium text-destructive">{msg}</p>
+          {needsKey && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Añade <code className="rounded bg-muted px-1 py-0.5">SIMEDALAVIDA_SUPABASE_SERVICE_ROLE_KEY</code> en Vercel (proyecto ai-agency-os).
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Métricas rápidas */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+        <MetricCard title="Clientes activos" value={activos} icon={Briefcase} />
+        <MetricCard title="MRR total" value={`${totalMrr.toLocaleString('es-ES')}€`} icon={Euro} />
+        <MetricCard title="Total clientes" value={clientes?.length ?? 0} icon={Users} />
+      </div>
+
+      {/* Header + botón añadir */}
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          {clientes?.length ?? 0} cliente{(clientes?.length ?? 1) !== 1 ? 's' : ''} registrados
+        </p>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger render={<Button size="sm" />}>
+            <Plus className="size-4 mr-1" />
+            Nuevo cliente
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Onboarding nuevo cliente</DialogTitle>
+              <DialogDescription>
+                Se registrará en Supabase, se enviará email de bienvenida y WhatsApp a María.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="nombre">Nombre del cliente *</Label>
+                <Input
+                  id="nombre"
+                  value={form.nombre_cliente}
+                  onChange={(e) => setForm((f) => ({ ...f, nombre_cliente: e.target.value }))}
+                  placeholder="Clínica Estética Ejemplo"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="email">Email del cliente *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={form.email_cliente}
+                  onChange={(e) => setForm((f) => ({ ...f, email_cliente: e.target.value }))}
+                  placeholder="contacto@cliente.com"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="setup">Setup fee (€)</Label>
+                  <Input
+                    id="setup"
+                    type="number"
+                    value={form.setup_fee}
+                    onChange={(e) => setForm((f) => ({ ...f, setup_fee: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="mrr">MRR mensual (€)</Label>
+                  <Input
+                    id="mrr"
+                    type="number"
+                    value={form.mrr}
+                    onChange={(e) => setForm((f) => ({ ...f, mrr: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="fecha">Fecha inicio</Label>
+                <Input
+                  id="fecha"
+                  type="date"
+                  value={form.fecha_inicio}
+                  onChange={(e) => setForm((f) => ({ ...f, fecha_inicio: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="agentes">Agentes contratados</Label>
+                <Input
+                  id="agentes"
+                  value={form.agentes}
+                  onChange={(e) => setForm((f) => ({ ...f, agentes: e.target.value }))}
+                  placeholder="Agente WhatsApp, Agente Email..."
+                />
+              </div>
+              <div className="space-y-1">
+                <Label htmlFor="notas">Notas internas</Label>
+                <Input
+                  id="notas"
+                  value={form.notas}
+                  onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))}
+                  placeholder="Observaciones..."
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <DialogClose render={<Button variant="outline" />}>Cancelar</DialogClose>
+              <Button
+                disabled={
+                  createCliente.isPending ||
+                  !form.nombre_cliente.trim() ||
+                  !form.email_cliente.trim()
+                }
+                onClick={() => createCliente.mutate(form)}
+              >
+                {createCliente.isPending && <Loader2 className="size-4 animate-spin mr-1" />}
+                Lanzar onboarding
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* Tabla clientes */}
+      {!clientes?.length ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Briefcase className="mx-auto mb-3 size-8 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">Aún no hay clientes registrados</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="rounded-lg border">
+          <div className="grid grid-cols-[1fr_1fr_auto_auto_auto_auto] gap-3 border-b bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <span>Cliente</span>
+            <span>Email</span>
+            <span>Estado</span>
+            <span>Setup</span>
+            <span>MRR</span>
+            <span>Inicio</span>
+          </div>
+          {clientes.map((c) => (
+            <div
+              key={c.id}
+              className="grid grid-cols-[1fr_1fr_auto_auto_auto_auto] items-center gap-3 border-b px-4 py-3 last:border-b-0"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{c.nombre_cliente}</p>
+                {c.agentes && (
+                  <p className="text-xs text-muted-foreground truncate">{c.agentes}</p>
+                )}
+              </div>
+              <span className="text-sm text-muted-foreground truncate">{c.email_cliente}</span>
+              <div className="flex items-center gap-1">
+                <Badge className={ESTADOS[c.estado]?.className ?? 'bg-muted'}>
+                  {ESTADOS[c.estado]?.label ?? c.estado}
+                </Badge>
+                {/* Ciclo de estado */}
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={updateEstado.isPending}
+                  title="Cambiar estado"
+                  onClick={() => {
+                    const next =
+                      c.estado === 'Configurando'
+                        ? 'Activo'
+                        : c.estado === 'Activo'
+                          ? 'Pausado'
+                          : 'Configurando';
+                    updateEstado.mutate({ id: c.id, estado: next });
+                  }}
+                >
+                  <Pencil className="size-3" />
+                </Button>
+              </div>
+              <span className="text-sm font-medium whitespace-nowrap">
+                {c.setup_fee?.toLocaleString('es-ES')}€
+              </span>
+              <span className="text-sm font-medium whitespace-nowrap text-green-600">
+                {c.mrr?.toLocaleString('es-ES')}€/m
+              </span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap flex items-center gap-1">
+                <Calendar className="size-3" />
+                {c.fecha_inicio
+                  ? new Date(c.fecha_inicio).toLocaleDateString('es-ES', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })
+                  : '—'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Notas de clientes con notas */}
+      {clientes?.some((c) => c.notas) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Notas internas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {clientes
+              .filter((c) => c.notas)
+              .map((c) => (
+                <div key={c.id} className="rounded border p-3">
+                  <p className="text-xs font-medium text-muted-foreground">{c.nombre_cliente}</p>
+                  <p className="text-sm">{c.notas}</p>
+                </div>
+              ))}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 // ──────────────────────────── Tab: Peligro ────────────────────────────
 
 function TabPeligro({ workspaceId }: { workspaceId: string }) {
@@ -949,6 +1290,10 @@ export default function AdminPage() {
             <Zap className="size-4 mr-1" />
             n8n
           </TabsTrigger>
+          <TabsTrigger value="clientes">
+            <Briefcase className="size-4 mr-1" />
+            Clientes
+          </TabsTrigger>
           <TabsTrigger value="peligro">
             <AlertTriangle className="size-4 mr-1" />
             Peligro
@@ -969,6 +1314,9 @@ export default function AdminPage() {
         </TabsContent>
         <TabsContent value="n8n" className="mt-4">
           <TabN8n />
+        </TabsContent>
+        <TabsContent value="clientes" className="mt-4">
+          <TabClientes />
         </TabsContent>
         <TabsContent value="peligro" className="mt-4">
           <TabPeligro workspaceId={workspace.id} />
