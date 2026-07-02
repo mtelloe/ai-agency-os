@@ -58,7 +58,7 @@ function BarChart({ kpis }: { kpis: DailyKpi[] }) {
               {k.kpi_date}: {k.total_messages} msgs
             </div>
             <div
-              className="w-full bg-primary/80 hover:bg-primary rounded-sm transition-all"
+              className="w-full bg-violet-500 hover:bg-violet-400 rounded-sm transition-all"
               style={{ height: `${Math.max(pct, 4)}%` }}
             />
             <span className="text-[9px] text-muted-foreground truncate w-full text-center">{label}</span>
@@ -241,7 +241,7 @@ export default function SqtInteligenciaPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
               { label: 'Experiencias', value: totales.experiencias, icon: ThumbsUp, color: 'text-blue-500' },
-              { label: 'Ideas', value: totales.experiencias, icon: Lightbulb, color: 'text-purple-500' },
+              { label: 'Ideas', value: totales.ideas, icon: Lightbulb, color: 'text-purple-500' },
               { label: 'Preguntas', value: totales.preguntas, icon: HelpCircle, color: 'text-orange-500' },
               { label: 'Días activos', value: diasActivos, icon: Users, color: 'text-green-500' },
             ].map(s => (
